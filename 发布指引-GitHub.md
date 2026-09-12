@@ -1,5 +1,14 @@
 # 发布到 GitHub Pages · 手把手操作指引
 
+> ✅ **已完成发布**：https://1339171078.github.io/hotel-review-agent/
+> 仓库：https://github.com/1339171078/hotel-review-agent
+> 本文档保留作为操作记录与后续维护参考。
+>
+> **后续更新方式**：把改好的文件提交到 `main` 分支（命令行 `git push`，或网页 Upload files），
+> GitHub Actions 会自动重新发布，1 分钟左右生效，网址不变。
+>
+> ⚠️ 国内网络访问 github.com / github.io 较慢（首次打开可能 30 秒以上，偶有失败），属网络环境问题，刷新重试即可。
+
 > 目标：拿到一个公网网址，手机、平板、同事的电脑打开就能用这个点评回复工具。
 > 全程约 10 分钟，**不需要装任何软件、不需要敲命令**，只要一个免费 GitHub 账号。
 
