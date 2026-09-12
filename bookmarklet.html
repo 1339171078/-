@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>携程点评抓取 · 书签安装</title>
+<style>
+  :root{--brand:#2563eb;--brand-grad:linear-gradient(120deg,#2563eb,#6366f1 55%,#8b5cf6);
+    --text:#101a33;--text-2:#465574;--text-3:#6b7891;--border:#dfe7f5;--surface:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--text);font:14px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background-color:#eef4ff;
+    background-image:radial-gradient(1100px 520px at 6% -8%,#d7e6ff 0,rgba(215,230,255,0) 62%),
+      radial-gradient(900px 480px at 98% 2%,#f0e2ff 0,rgba(240,226,255,0) 64%),
+      linear-gradient(180deg,#f8fbff,#eef4ff 50%,#f4f8ff);background-attachment:fixed}
+  .wrap{max-width:820px;margin:0 auto;padding:36px 24px 70px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;
+    box-shadow:0 10px 30px rgba(16,26,51,.07);position:relative;overflow:hidden;margin-bottom:18px}
+  .card::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--brand-grad)}
+  h1{margin:0 0 6px;font-size:20px;letter-spacing:-.01em}
+  .sub{color:var(--text-3);font-size:13px;margin:0 0 20px}
+  h2{font-size:14px;margin:22px 0 10px;display:flex;align-items:center;gap:9px}
+  h2 .n{width:22px;height:22px;border-radius:7px;background:var(--brand-grad);color:#fff;font-size:12px;
+    display:grid;place-items:center;font-weight:700}
+  #bm{display:inline-flex;align-items:center;gap:9px;padding:13px 24px;border-radius:12px;color:#fff;
+    background:var(--brand-grad);font-weight:700;font-size:15px;text-decoration:none;cursor:grab;
+    box-shadow:0 6px 18px rgba(37,99,235,.35);user-select:none}
+  #bm:active{cursor:grabbing}
+  .tip{border-radius:10px;padding:11px 14px;font-size:12.5px;margin:12px 0;border:1px solid}
+  .tip.warn{background:#fff8e8;border-color:#fcd97a;color:#b45309}
+  .tip.info{background:#eef4ff;border-color:#cfe0ff;color:#1d4ed8}
+  .tip.ok{background:#e9fbf3;border-color:#9ceac9;color:#047857}
+  ol{padding-left:20px;margin:10px 0}
+  li{margin:6px 0}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;background:#eff4fd;
+    border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:#1d4ed8}
+  .btn{cursor:pointer;font:inherit;font-size:13px;font-weight:650;border-radius:9px;padding:9px 15px;
+    border:1px solid var(--border);background:#fff;color:var(--text-2)}
+  .btn:hover{border-color:var(--brand);color:var(--brand)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{border-bottom:1px solid var(--border);padding:8px 6px;text-align:left}
+  th{color:var(--text-3);font-weight:600;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>携程 eBooking 点评抓取 · 书签小工具</h1>
+    <p class="sub">登录携程商家后台后，点一下书签就能把当前页的点评导入「酒店点评回复智能体」</p>
+
+    <div class="tip info">数据只在你自己的浏览器里处理，不经过任何第三方服务器，也不需要携程开放接口权限。</div>
+
+    <h2><span class="n">1</span>把按钮拖到书签栏</h2>
+    <p><a id="bm" href="#" draggable="true">📥 抓取携程点评</a></p>
+    <div class="tip warn">⚠️ 请用鼠标把这个蓝色按钮 <b>拖动</b> 到浏览器顶部的书签栏；<b>不要直接点它</b>（在安装页点击没有意义）。<br>
+      看不到书签栏？按 <code>⌘ + Shift + B</code>（Windows 用 <code>Ctrl + Shift + B</code>）显示。</div>
+    <p style="margin-top:10px">
+      <button class="btn" id="copyCode">复制书签代码（手动创建书签时用）</button>
+      <button class="btn" id="reload">重新生成</button>
+    </p>
+    <p class="sub" id="status" style="margin:8px 0 0"></p>
+
+    <h2><span class="n">2</span>在携程后台使用</h2>
+    <ol>
+      <li>打开携程 eBooking 商家后台 → <b>点评管理 / 点评回复</b> 页面</li>
+      <li>点一下书签栏里的「📥 抓取携程点评」</li>
+      <li><b>首次使用</b>：页面右下角提示"请点击任意一条点评卡片"，你就点一下列表里的<b>一条点评</b>，工具会记住它的结构</li>
+      <li>面板会显示识别到多少条点评，确认无误后点 <b>「导入到智能体」</b></li>
+      <li>自动跳转到智能体，点评已进入批量列表，直接生成回复即可</li>
+    </ol>
+    <div class="tip ok">之后每次只要：<b>翻到点评页 → 点书签 → 导入</b>，两步完成。换页后重新点一次即可抓取新一页。</div>
+
+    <h2><span class="n">3</span>先在本机试一遍（推荐）</h2>
+    <p>用下面这个模拟页面练手，不需要登录携程：</p>
+    <p><a class="btn" href="./demo/ebooking-mock.html" target="_blank">打开模拟携程点评页 →</a></p>
+
+    <h2><span class="n">4</span>常见问题</h2>
+    <table>
+      <tr><th>现象</th><th>处理</th></tr>
+      <tr><td>没有识别到点评</td><td>点面板里的「点选方式」，再点一条点评卡片</td></tr>
+      <tr><td>识别到了无关内容</td><td>同样用「点选方式」重新指定一条真正的点评卡片</td></tr>
+      <tr><td>没跳到智能体</td><td>点评已复制到剪贴板，到智能体「批量处理 → 粘贴导入」粘贴即可</td></tr>
+      <tr><td>点书签没反应</td><td>确认在 <code>ebooking.ctrip.com</code> 页面；部分浏览器需允许该站点运行书签脚本</td></tr>
+      <tr><td>携程改版后失效</td><td>重新用「点选方式」指定一次即可恢复</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">!</span>合规与风险提示</h2>
+    <div class="tip warn">
+      本工具通过你已登录的浏览器页面读取点评内容，属于<b>辅助录入</b>手段，不调用、不破解携程任何接口。
+      使用前请确认符合携程平台的服务条款与贵店的内控要求；建议仅用于把点评搬进自己的回复工具，
+      <b>回复仍由人工确认后手工粘贴回后台</b>，不做自动发布。
+      若平台后续提供官方开放接口，建议改用官方接口。
+    </div>
+  </div>
+</div>
+
+<script>
+var SRC = '', TOOL = 'https://1339171078.github.io/hotel-review-agent/';
+function setStatus(msg, color) {
+  var el = document.getElementById('status');
+  el.textContent = msg; el.style.color = color || '#6b7891';
+}
+function build() {
+  fetch('bookmarklet.js', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (code) {
+      SRC = code;
+      document.getElementById('bm').setAttribute('href', 'javascript:' + encodeURIComponent(code));
+      setStatus('✓ 书签已就绪，请把它拖到书签栏（共 ' + code.length + ' 字符）', '#047857');
+    })
+    .catch(function (e) {
+      setStatus('⚠️ 无法读取 bookmarklet.js（' + e.message + '）。请通过部署好的网址打开本页，或点「复制书签代码」后手动创建书签。', '#b45309');
+    });
+}
+document.getElementById('bm').addEventListener('click', function (e) {
+  e.preventDefault();
+  setStatus('请把这个按钮「拖动」到书签栏，而不是直接点击。', '#b45309');
+});
+document.getElementById('copyCode').addEventListener('click', function () {
+  if (!SRC) { setStatus('源码还没加载好，请稍候再试', '#b45309'); return; }
+  var text = 'javascript:' + encodeURIComponent(SRC);
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(function () { setStatus('✓ 已复制。手动新建书签，把这段粘到「网址」里即可。', '#047857'); })
+    .catch(function () { window.prompt('复制下面的代码，手动新建书签并粘贴到网址栏：', text); });
+});
+document.getElementById('reload').addEventListener('click', build);
+build();
+</script>
+</body>
+</html>

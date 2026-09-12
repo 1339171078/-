@@ -283,6 +283,13 @@
   .brow textarea{min-height:104px;font-size:13.5px;margin-top:11px;background:var(--surface)}
   .brow details{margin-top:10px;font-size:12.5px;color:var(--text-2)}
   .brow details summary{cursor:pointer;color:var(--brand);font-weight:650;font-size:12px}
+  .badge-src{background:#eef4ff;color:var(--brand-2);border:1px solid #cfe0ff;border-radius:999px;
+    font-size:11px;padding:3px 10px;font-weight:700}
+  .import-box{border:1px dashed var(--border-2);border-radius:var(--r-sm);padding:11px 13px;margin-top:14px;
+    background:var(--surface-2)}
+  .import-box[open]{background:var(--surface);border-style:solid;border-color:var(--brand-ring)}
+  .import-box summary{cursor:pointer;font-size:12.5px;font-weight:650;color:var(--brand-2)}
+  .import-box textarea{margin-top:9px;min-height:96px;font-family:var(--mono);font-size:12px}
   .badge-warn{background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad-border);
     border-radius:999px;font-size:11px;padding:3px 10px;font-weight:700}
   .badge-ok{background:var(--good-soft);color:var(--good);border:1px solid var(--good-border);
@@ -493,6 +500,17 @@
         </select>
       </div>
     </div>
+    <details class="import-box" id="importBox">
+      <summary>📥 从携程导入（书签抓取 / 粘贴 JSON）</summary>
+      <div class="hint" style="margin:8px 0">
+        用 <b>书签小工具</b>在携程 eBooking 点评页点一下即可自动导入；也可以把书签面板「复制 JSON」的内容粘贴到这里。
+      </div>
+      <textarea id="importText" class="small" placeholder="把书签导出的 JSON 粘贴到这里…"></textarea>
+      <div class="toolbar" style="margin-top:8px">
+        <button class="btn btn-line" id="importBtn">导入这批点评</button>
+        <button class="btn btn-line" id="importClear">清空</button>
+      </div>
+    </details>
     <div class="toolbar" style="margin-top:14px">
       <button class="btn btn-primary" id="batchRun">⚡ 批量生成</button>
       <button class="btn btn-line" id="batchDemo">载入示例</button>
@@ -1653,12 +1671,16 @@ function renderBatch(seedBase){
       '<select data-br="'+i+'" aria-label="第'+(i+1)+'条评分">'+[5,4,3,2,1].map(v=>'<option value="'+v+'"'+(v===row.rating?' selected':'')+'>'+v+' 分</option>').join('')+'</select>'+
       '<select data-bt="'+i+'" aria-label="第'+(i+1)+'条等级">'+['good','neutral','bad'].map(t=>'<option value="'+t+'"'+(t===row.tier?' selected':'')+'>'+TIER_NAME[t]+'</option>').join('')+'</select>'+
       (row.auto?'<span class="hint" style="margin:0">自动判定</span>':'')+
+      (row.src?'<span class="badge-src">'+esc(row.src)+'</span>':'')+
       (warnCount?'<span class="badge-warn">⚠ '+warnCount+' 项待确认</span>':'<span class="badge-ok">✓ 自查通过</span>')+
       '<span style="margin-left:auto"></span>'+
       '<button class="btn btn-ghost" data-bcopy="'+i+'">复制</button>'+
       '<button class="btn btn-ghost" data-breroll="'+i+'">换一版</button>'+
       '</div>'+
-      '<div class="bmeta">'+dims+'</div>'+
+      '<div class="bmeta">'+
+        (row.guest?'<span class="chip">'+esc(row.guest)+'</span>':'')+
+        (row.date?'<span class="chip">'+esc(row.date)+'</span>':'')+
+        (row.room?'<span class="chip">'+esc(row.room)+'</span>':'')+dims+'</div>'+
       '<details><summary>查看点评原文</summary><div style="margin-top:6px">'+esc(row.review)+'</div></details>'+
       '<textarea data-btext="'+i+'" spellcheck="false">'+esc(reply)+'</textarea>'+
       '</div>';
@@ -1705,6 +1727,89 @@ function batchRowsForExport(){
     r.reply||'',
     complianceCheck(r.reply||'',r.tier,CONFIG.banned.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))
       .filter(c=>!c.ok).map(c=>c.msg).join('；')]);
+}
+
+/* =========================================================
+   7.5 外部点评导入（携程书签小工具 / 粘贴 JSON）
+   ---------------------------------------------------------
+   · 书签把点评压缩后放进网址 #import=，打开即自动导入
+   · 也可把书签导出的 JSON 粘到「粘贴导入」框
+   · 按内容指纹去重：同一批点评重复导入会自动跳过
+   ========================================================= */
+const LS_IMPORTED='hra_imported_v1';
+function loadImported(){ try{ return JSON.parse(store.getItem(LS_IMPORTED)||'[]'); }catch(e){ return []; } }
+function saveImported(list){ try{ store.setItem(LS_IMPORTED,JSON.stringify(list.slice(-800))); }catch(e){} }
+function fingerprint(it){
+  const base=[it.src||'',String(it.text||'').replace(/\s/g,'').slice(0,90),it.date||'',it.guest||''].join('|');
+  let h=0; for(let i=0;i<base.length;i++) h=(h*31+base.charCodeAt(i))|0;
+  return 'k'+h;
+}
+function normalizeImported(raw,src){
+  const out=[];
+  (Array.isArray(raw)?raw:[]).forEach(it=>{
+    if(!it) return;
+    const text=String(it.text||it.content||it.comment||'').replace(/\s+/g,' ').trim();
+    if(text.length<2) return;                    // 只丢掉真正的空内容，短评也保留
+    let rating=Number(it.rating);
+    if(!(rating>=1&&rating<=5)) rating=3;
+    out.push({rating:Math.round(rating), text:text.slice(0,2000),
+      guest:String(it.guest||'').slice(0,24), date:String(it.date||'').slice(0,24),
+      room:String(it.room||'').slice(0,48), src:src||'外部导入'});
+  });
+  return out;
+}
+function mergeImported(items,src){
+  const seen=loadImported(), added=[];
+  items.forEach(it=>{
+    const fp=fingerprint(it);
+    if(seen.indexOf(fp)>=0) return;
+    seen.push(fp); added.push(it);
+  });
+  if(!added.length) return 0;
+  saveImported(seen);
+  batchRows=batchRows.concat(added.map(it=>({rating:it.rating, review:it.text, tier:inferTier(it.text),
+    auto:true, src:it.src, guest:it.guest, date:it.date, room:it.room})));
+  return added.length;
+}
+function b64urlToBytes(str){
+  const t=String(str).replace(/-/g,'+').replace(/_/g,'/');
+  const bin=atob(t+'='.repeat((4-t.length%4)%4));
+  const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+async function decodePayload(code){
+  const tag=String(code)[0], bytes=b64urlToBytes(String(code).slice(1));
+  if(tag==='z' && typeof DecompressionStream==='function'){
+    const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return JSON.parse(await new Response(stream).text());
+  }
+  if(typeof TextDecoder==='function') return JSON.parse(new TextDecoder().decode(bytes));
+  let bin=''; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]);
+  return JSON.parse(decodeURIComponent(escape(bin)));
+}
+function clearImportHash(){
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; }
+}
+function finishImport(items,src){
+  if(!items.length){ toast('导入内容为空或格式不支持'); return 0; }
+  const n=mergeImported(items,src);
+  switchMode('batch');
+  $('batchOutput').style.display='';
+  renderBatch();
+  toast(n ? ('已从「'+src+'」导入 '+n+' 条点评，已自动分级') : '这批点评之前已导入过，重复项已跳过');
+  return n;
+}
+async function applyImportFromHash(){
+  const m=(location.hash||'').match(/[#&]import=([^&]+)/);
+  if(!m) return false;
+  try{
+    const data=await decodePayload(m[1]);
+    const src=data.src||'外部导入';
+    finishImport(normalizeImported(data.items||data,src),src);
+  }catch(e){ toast('导入失败：数据无法解析，请改用「粘贴导入」'); }
+  clearImportHash();
+  return true;
 }
 
 /* =========================================================
@@ -1954,6 +2059,15 @@ $('hisExport').addEventListener('click',()=>{
 
 /* 批量事件 */
 $('batchRun').addEventListener('click',()=>{ batchRun(); $('batchOutput').style.display=''; });
+$('importBtn').addEventListener('click',()=>{
+  const raw=$('importText').value.trim();
+  if(!raw){ toast('请先粘贴书签导出的 JSON'); return; }
+  let data; try{ data=JSON.parse(raw); }catch(e){ toast('JSON 格式不正确，请重新复制'); return; }
+  const src=(data&&data.src)||'携程 eBooking';
+  const items=normalizeImported(Array.isArray(data)?data:(data.items||[]),src);
+  if(finishImport(items,src)) $('importText').value='';
+});
+$('importClear').addEventListener('click',()=>{ $('importText').value=''; });
 $('batchClear').addEventListener('click',()=>{ $('batchText').value=''; batchRows=[]; $('batchOutput').style.display='none'; });
 $('batchDemo').addEventListener('click',()=>{
   $('batchText').value=['5|前台小姐姐特别热情，办理入住很快，房间干净整洁，床品舒服，位置也好，出门就是地铁口，下次还来。',
@@ -1994,7 +2108,7 @@ $('review').value='';                      // 默认留空，由使用者自行�
 switchMode('single');
 doGenerate(true);
 applyLockMode();
-loadLockedConfig();
+loadLockedConfig().then(applyImportFromHash);
 </script>
 </body>
 </html>

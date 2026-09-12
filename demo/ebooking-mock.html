@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light">
+<title>模拟 · 携程 eBooking 点评管理（用于测试书签抓取）</title>
+<style>
+  body{margin:0;font:14px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#f2f4f8;color:#1f2937}
+  .topbar{background:#0b5cab;color:#fff;padding:12px 24px;font-weight:600;display:flex;gap:14px;align-items:center}
+  .topbar small{font-weight:400;opacity:.85}
+  .nav{background:#fff;border-bottom:1px solid #e3e8ef;padding:0 24px;display:flex;gap:20px;font-size:13px;color:#5b6579}
+  .nav span{padding:11px 0;border-bottom:2px solid transparent}
+  .nav span.on{color:#0b5cab;border-bottom-color:#0b5cab;font-weight:600}
+  .layout{max-width:1080px;margin:18px auto;padding:0 20px}
+  .filter{background:#fff;border:1px solid #e3e8ef;border-radius:10px;padding:12px 16px;margin-bottom:14px;
+    font-size:13px;color:#5b6579;display:flex;gap:10px;flex-wrap:wrap}
+  .filter b{color:#1f2937}
+  .comment-list{display:flex;flex-direction:column;gap:12px}
+  .comment-item{background:#fff;border:1px solid #e3e8ef;border-radius:12px;padding:16px 18px}
+  .comment-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .comment-user{font-weight:600;color:#1f2937}
+  .comment-star{color:#f59e0b;letter-spacing:2px}
+  .comment-star .star-off{color:#d8dee9}
+  .comment-score{color:#f59e0b;font-weight:700}
+  .comment-date{color:#8b95a7;font-size:12px;margin-left:auto}
+  .comment-room{display:inline-block;margin-top:6px;font-size:12px;color:#0b5cab;background:#eaf2fd;
+    border:1px solid #cfe0f8;border-radius:6px;padding:1px 8px}
+  .comment-content{margin-top:9px;color:#333c4e;white-space:pre-wrap}
+  .comment-reply{margin-top:10px;background:#f7f9fc;border-left:3px solid #0b5cab;border-radius:8px;
+    padding:9px 12px;font-size:13px;color:#5b6579}
+  .pager{margin:18px 0 40px;text-align:center;color:#8b95a7;font-size:13px}
+  .note{max-width:1080px;margin:14px auto 0;padding:0 20px;color:#8b95a7;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="topbar">携程 eBooking · 商家后台 <small>（这是用于测试抓取书签的模拟页面，不是真实携程站点）</small></div>
+<div class="nav"><span class="on">点评管理</span><span>订单管理</span><span>房价房态</span><span>数据中心</span></div>
+
+<div class="layout">
+  <div class="filter">
+    <span>全部点评 <b>6</b></span><span>待回复 <b>4</b></span><span>已回复 <b>2</b></span>
+    <span>评分：<b>4.2</b></span>
+  </div>
+
+  <div class="comment-list">
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">旅行的小鹿</span>
+        <span class="comment-star">★★★★★</span>
+        <span class="comment-score">5.0分</span>
+        <span class="comment-date">2026-03-12</span>
+      </div>
+      <span class="comment-room">入住房型：行政大床房</span>
+      <div class="comment-content">位置非常好，出门就是地铁口，走两步就是商圈。前台小姐姐特别热情，办理入住很快，还帮我们升级了房间。房间干净整洁，床品很舒服，隔音也不错，早餐品种挺多，现煮的面很好吃。下次来还会住这里！</div>
+    </div>
+
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">老王出差中</span>
+        <span class="comment-star">★★★★<span class="star-off">★</span></span>
+        <span class="comment-score">4.0分</span>
+        <span class="comment-date">2026-03-11</span>
+      </div>
+      <span class="comment-room">入住房型：高级双床房</span>
+      <div class="comment-content">整体不错，服务热情，房间也干净，隔音还可以。就是停车位有点紧张，找车位花了些时间，另外早餐结束得有点早，九点下去基本没什么东西了。总体还是推荐的。</div>
+    </div>
+
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">匿名用户</span>
+        <span class="comment-star">★★★<span class="star-off">★★</span></span>
+        <span class="comment-score">3.0分</span>
+        <span class="comment-date">2026-03-10</span>
+      </div>
+      <span class="comment-room">入住房型：标准大床房</span>
+      <div class="comment-content">位置还行，离地铁站大概走十分钟。前台态度还可以，但是入住的时候等了快二十分钟才办好。房间空调不太制冷，晚上有点闷，隔音也一般，能听到走廊的声音。卫生间毛巾有点旧了，希望改进一下吧。</div>
+    </div>
+
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">带娃出游的张女士</span>
+        <span class="comment-star">★★<span class="star-off">★★★</span></span>
+        <span class="comment-score">2.0分</span>
+        <span class="comment-date">2026-03-09</span>
+      </div>
+      <span class="comment-room">入住房型：家庭套房</span>
+      <div class="comment-content">设施太老旧了，热水忽冷忽热，WiFi 基本连不上，电梯还坏了一部。最不能接受的是卫生，床单上有污渍，房间一股霉味。另外打电话给前台一直没人接，服务响应太慢了。希望酒店重视一下。</div>
+    </div>
+
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">不吃香菜</span>
+        <span class="comment-star">★<span class="star-off">★★★★</span></span>
+        <span class="comment-score">1.0分</span>
+        <span class="comment-date">2026-03-08</span>
+      </div>
+      <span class="comment-room">入住房型：标准双床房</span>
+      <div class="comment-content">非常失望！房间里发现蟑螂，孩子被吓哭了，床单上还有污渍，跟前台反映只说会处理，没有任何说法。这种卫生条件怎么敢接待客人？不会再来第二次。</div>
+      <div class="comment-reply">商家回复：尊敬的客人，非常抱歉给您带来不好的体验，我们已安排消杀并加强检查。——云栖酒店 管理团队</div>
+    </div>
+
+    <div class="comment-item">
+      <div class="comment-head">
+        <span class="comment-user">商务常旅客</span>
+        <span class="comment-star">★★★★<span class="star-off">★</span></span>
+        <span class="comment-score">4.5分</span>
+        <span class="comment-date">2026-03-07</span>
+      </div>
+      <span class="comment-room">入住房型：商务大床房</span>
+      <div class="comment-content">出差住了三晚，房间打扫得很干净，毛巾和床单都很新。早餐很丰富，中西式都有，咖啡也还不错。美中不足是押金退得有点慢，退房三天后才到账，发票也是催了两次才开。</div>
+    </div>
+  </div>
+
+  <div class="pager">上一页　<b>1</b>　2　3　下一页</div>
+</div>
+
+<div class="note">
+  测试方法：把「携程点评抓取」书签拖到书签栏 → 在本页点书签 → 首次点选任意一条点评卡片 → 点「导入到智能体」。
+  本页所有点评均为虚构示例，仅用于验证抓取与导入流程。
+</div>
+
+<script>
+  /* 让书签在测试时把数据送回本机的智能体（部署在 Pages 上时会自动指向线上地址） */
+  window.__HRA_TOOL__ = location.origin + '/index.html';
+</script>
+</body>
+</html>
