@@ -68,7 +68,6 @@
     cursor:pointer;transition:.18s;outline-offset:3px}
   .avatar:hover{transform:translateY(-1px)}
   .avatar:focus-visible{outline:3px solid rgba(255,255,255,.7)}
-  .avatar.locked{cursor:not-allowed;transform:none}
   .avatar img{width:46px;height:46px;border-radius:13px;object-fit:cover;display:block;background:#fff;
     border:2px solid rgba(255,255,255,.7);box-shadow:0 4px 14px rgba(0,0,0,.22)}
   .avatar-badge{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;
@@ -76,12 +75,10 @@
     box-shadow:0 2px 8px rgba(0,0,0,.22);opacity:0;transition:.18s;pointer-events:none}
   .avatar-badge svg{width:12px;height:12px}
   .avatar:hover .avatar-badge,.avatar:focus-visible .avatar-badge{opacity:1}
-  .avatar.locked .avatar-badge{display:none}
   .avatar-del{position:absolute;right:-6px;top:-6px;width:19px;height:19px;border-radius:50%;border:2px solid #fff;
     background:var(--bad);color:#fff;font-size:13px;line-height:1;display:none;place-items:center;
     cursor:pointer;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .avatar.has-img:hover .avatar-del{display:grid}
-  .avatar.locked .avatar-del{display:none!important}
   .mark{width:44px;height:44px;flex:0 0 auto;border-radius:13px;display:grid;place-items:center;
     background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 14px rgba(0,0,0,.12);backdrop-filter:blur(4px)}
@@ -343,7 +340,7 @@
       </div>
     </div>
     <div class="head-actions">
-      <span class="btn btn-quiet" id="lockBadge" role="status" style="display:none;cursor:default"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> 门店信息已锁定</span>
+      <span class="btn btn-quiet" id="lockBadge" role="status" style="display:none;cursor:default"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg> 门店名称 / 电话已锁定</span>
       <button class="btn btn-quiet" id="btnConfig">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2.2"/><circle cx="15" cy="12" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg>
         门店配置
@@ -1401,7 +1398,7 @@ function complianceCheck(text, tier, extraBanned){
 const LS_CONFIG='hra_config_v1', LS_HISTORY='hra_history_v1';
 const HOTEL_FALLBACK='本酒店', SIGN_FALLBACK='——酒店管理团队 敬上';
 const DEFAULT_CONFIG={hotel:'',guest:'亲爱的客人',phone:'',
-  sign:'', tone:'warm', banned:'', avatar:''};   // 全部留空：由使用者在界面上自行填写，落款自动生成
+  sign:'', tone:'warm', banned:'', avatar:'', avatarTouched:false};   // 全部留空：由使用者在界面上自行填写，落款自动生成
 
 const memStore={};
 const store=(()=>{ try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
@@ -1748,7 +1745,7 @@ async function loadLockedConfig(){
     if(!c||typeof c!=='object') return;
     CONFIG=Object.assign({},CONFIG,{hotel:c.hotel||'',guest:c.guest||DEFAULT_CONFIG.guest,
       phone:c.phone||'',sign:c.sign||'',tone:c.tone||'warm',
-      avatar:c.avatar||CONFIG.avatar||''});
+      avatar: CONFIG.avatarTouched ? CONFIG.avatar : (c.avatar||CONFIG.avatar||'')});
     applyConfigToForm(); renderAvatar();
   }catch(e){ /* 没有配置文件就跳过 */ }
 }
@@ -1762,9 +1759,8 @@ function renderAvatar(){
   if(a){ img.src=a; img.style.display='block'; fb.style.display='none'; }
   else { img.removeAttribute('src'); img.style.display='none'; fb.style.display='grid'; }
   box.classList.toggle('has-img',!!a);
-  box.classList.toggle('locked',!!LOCKED);
-  box.title = LOCKED ? '公开版本：头像由管理员统一设定'
-                     : (a ? '点击更换头像' : '点击上传酒店头像（保存在本机）');
+  box.classList.remove('locked');
+  box.title = a ? '点击更换头像（保存在本机）' : '点击上传酒店头像（保存在本机）';
 }
 /* 读取图片 → 居中裁切为 200×200 → JPEG，避免占用过大存储 */
 function processAvatar(file,cb){
@@ -1791,10 +1787,7 @@ function processAvatar(file,cb){
   rd.onerror=()=>cb(null);
   rd.readAsDataURL(file);
 }
-function pickAvatar(){
-  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }
-  $('avatarFile').click();
-}
+function pickAvatar(){ $('avatarFile').click(); }   // 头像任何设备都可自行修改
 $('avatarBox').addEventListener('click',e=>{ if(e.target && e.target.id==='avatarDel') return; pickAvatar(); });
 $('avatarBox').addEventListener('keydown',e=>{
   if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pickAvatar(); }
@@ -1802,21 +1795,20 @@ $('avatarBox').addEventListener('keydown',e=>{
 });
 $('avatarDel').addEventListener('click',e=>{ e.stopPropagation(); removeAvatar(); });
 function removeAvatar(){
-  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }
   if(!CONFIG.avatar) return;
-  CONFIG.avatar=''; saveConfig(); renderAvatar(); toast('已移除头像');
+  CONFIG.avatar=''; CONFIG.avatarTouched=true; saveConfig(); renderAvatar(); toast('已移除头像');
 }
 $('avatarFile').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0]; e.target.value='';
   if(!f) return;
-  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }   // 锁定版禁止改动头像
   if(!/^image\//.test(f.type)){ toast('请选择图片文件（JPG / PNG / WebP）'); return; }
   if(f.size>8*1024*1024){ toast('图片过大，请选择小于 8MB 的图片'); return; }
   processAvatar(f,url=>{
     if(!url){ toast('图片读取失败，请换一张'); return; }
     if(url.length>1200000){ toast('图片过大，请换一张更小的'); return; }
-    const prev=CONFIG.avatar; CONFIG.avatar=url;
-    if(!saveConfig()){ CONFIG.avatar=prev; toast('保存失败：浏览器存储空间不足'); return; }
+    const prev=CONFIG.avatar, prevTouched=CONFIG.avatarTouched;
+    CONFIG.avatar=url; CONFIG.avatarTouched=true;
+    if(!saveConfig()){ CONFIG.avatar=prev; CONFIG.avatarTouched=prevTouched; toast('保存失败：浏览器存储空间不足'); return; }
     renderAvatar(); toast('头像已更新');
   });
 });
@@ -1904,7 +1896,8 @@ $('cfgSave').addEventListener('click',()=>{
     guest:$('cfgGuest').value.trim()||DEFAULT_CONFIG.guest,
     phone:$('cfgPhone').value.trim()||DEFAULT_CONFIG.phone,
     sign:$('cfgSign').value.trim()||DEFAULT_CONFIG.sign,
-    tone:$('cfgTone').value, banned:$('cfgBanned').value, avatar:CONFIG.avatar||''};
+    tone:$('cfgTone').value, banned:$('cfgBanned').value, avatar:CONFIG.avatar||'',
+    avatarTouched:CONFIG.avatarTouched||false};
   saveConfig(); applyConfigToForm(); closeOverlay('ovConfig');
   if(currentReply) doGenerate(true);
   toast('门店配置已保存');
@@ -1936,7 +1929,7 @@ $('cfgFile').addEventListener('change',e=>{
     try{
       const c=JSON.parse(rd.result);
       CONFIG=Object.assign({},DEFAULT_CONFIG,{hotel:c.hotel,guest:c.guest,phone:c.phone,sign:c.sign,
-        tone:c.tone,banned:c.banned,avatar:c.avatar||''});
+        tone:c.tone,banned:c.banned,avatar:c.avatar||'',avatarTouched:!!c.avatar});
       saveConfig(); renderAvatar();
       $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
       $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone; $('cfgBanned').value=CONFIG.banned||'';
