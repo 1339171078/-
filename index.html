@@ -158,7 +158,7 @@
   <section class="card" id="singleInput">
     <h2><span class="dot"></span>① 输入点评信息</h2>
     <div class="row2">
-      <div><label>酒店名称</label><input type="text" id="hotel" placeholder="如 云栖精品酒店"></div>
+      <div><label>酒店名称 <span style="color:#e0353b">*</span></label><input type="text" id="hotel" placeholder="请填写您的酒店名称"></div>
       <div><label>客人称呼</label><input type="text" id="guest" placeholder="如 王女士"></div>
     </div>
     <div class="row2">
@@ -181,8 +181,8 @@
         </select>
       </div>
     </div>
-    <label>客服联系电话（差评邀约用）</label>
-    <input type="text" id="phone" placeholder="如 400-000-0000">
+    <label>客服联系电话（差评邀约用，请填真实号码）</label>
+    <input type="text" id="phone" placeholder="请填写酒店客服电话">
 
     <label>点评原文</label>
     <textarea id="review" placeholder="把顾客的原话粘贴到这里，系统会自动识别服务/位置/设施/卫生四个维度…"></textarea>
@@ -305,11 +305,11 @@
   <div class="modal">
     <h3>⚙️ 门店配置 <span class="muted">保存在本机浏览器；导出 JSON 给同事导入，即可全店话术统一</span></h3>
     <div class="row2">
-      <div><label>酒店名称</label><input type="text" id="cfgHotel"></div>
+      <div><label>酒店名称 <span style="color:#e0353b">*</span></label><input type="text" id="cfgHotel" placeholder="请填写您的酒店名称"></div>
       <div><label>默认客人称呼</label><input type="text" id="cfgGuest"></div>
     </div>
     <div class="row2">
-      <div><label>客服电话（差评邀约用）</label><input type="text" id="cfgPhone"></div>
+      <div><label>客服电话（差评邀约用）</label><input type="text" id="cfgPhone" placeholder="请填写酒店客服电话"></div>
       <div>
         <label>默认语气</label>
         <select id="cfgTone">
@@ -760,6 +760,11 @@ function complianceCheck(text, tier, extraBanned){
   const phoneLeak = /1[3-9]\d{9}/.test(text);
   add(!phoneLeak, phoneLeak ? '出现完整手机号，建议改为官方客服电话或引导私信' : '未出现个人手机号');
 
+  const noHotel=text.includes('【请填写酒店名称】');
+  add(!noHotel, noHotel ? '尚未填写酒店名称，发布前请把【请填写酒店名称】替换成真实店名' : '已填写酒店名称');
+  const noPhone=text.includes('【请填写客服电话】');
+  if(noPhone) add(false, '尚未填写客服电话，发布前请把【请填写客服电话】替换成真实号码');
+
   const custom=(extraBanned||[]).filter(w=>w && text.includes(w));
   if((extraBanned||[]).length) add(!custom.length, custom.length ? '触犯门店自定义禁用词：'+custom.join('、') : '未出现门店自定义禁用词');
 
@@ -780,7 +785,8 @@ function complianceCheck(text, tier, extraBanned){
    5. 配置 / 存储 / 工具
    ========================================================= */
 const LS_CONFIG='hra_config_v1', LS_HISTORY='hra_history_v1';
-const DEFAULT_CONFIG={hotel:'云栖精品酒店',guest:'亲爱的客人',phone:'400-000-0000',
+const HOTEL_PH='【请填写酒店名称】', PHONE_PH='【请填写客服电话】';
+const DEFAULT_CONFIG={hotel:'',guest:'亲爱的客人',phone:'',
   sign:'——{hotel} 管理团队 敬上', tone:'warm', banned:''};
 
 const memStore={};
@@ -875,9 +881,9 @@ function renderDims(){
 }
 
 function gatherState(){
-  state.hotel=$('hotel').value.trim()||'本酒店';
+  state.hotel=$('hotel').value.trim()||HOTEL_PH;
   state.guest=$('guest').value.trim()||'亲爱的客人';
-  state.phone=$('phone').value.trim()||'酒店官方客服电话';
+  state.phone=$('phone').value.trim()||PHONE_PH;
   state.sign=CONFIG.sign||SIGN;
   state.internal=$('internal').value.trim();
   state.tier=$('tier').value;
@@ -989,8 +995,8 @@ function parseBatch(text,defRating,tierMode){
 }
 
 function rowState(row){
-  return {hotel:CONFIG.hotel||'本酒店', guest:CONFIG.guest||'亲爱的客人',
-    phone:CONFIG.phone||'酒店官方客服电话', sign:CONFIG.sign||SIGN, internal:'',
+  return {hotel:CONFIG.hotel||HOTEL_PH, guest:CONFIG.guest||'亲爱的客人',
+    phone:CONFIG.phone||PHONE_PH, sign:CONFIG.sign||SIGN, internal:'',
     tier:row.tier, severe:SEVERE_WORDS.some(w=>row.review.includes(w)),
     dims:DIM_KEYS.map(k=>analyzeDim(row.review,k))};
 }
@@ -1001,6 +1007,7 @@ function rowReply(row,i,seedBase){
 function batchRun(seedBase){
   const text=$('batchText').value.trim();
   if(!text){ toast('请先粘贴至少一条点评'); return; }
+  if(!CONFIG.hotel) toast('提示：请先填写酒店名称（单条模式顶部或「门店配置」里）');
   batchRows=parseBatch(text,+$('batchRating').value,$('batchTierMode').value);
   renderBatch(seedBase);
 }
@@ -1169,10 +1176,20 @@ document.addEventListener('keydown',e=>{
 $('rating').addEventListener('change',()=>{ $('tier').value=tierOf(+$('rating').value); doGenerate(); });
 $('tier').addEventListener('change',()=>doGenerate());
 $('severe').addEventListener('change',()=>doGenerate());
+function syncContactFields(){
+  CONFIG.hotel=$('hotel').value.trim();
+  CONFIG.guest=$('guest').value.trim()||DEFAULT_CONFIG.guest;
+  CONFIG.phone=$('phone').value.trim();
+  saveConfig();
+}
+['hotel','guest','phone'].forEach(id=>$(id).addEventListener('input',syncContactFields));
 function softRefresh(){ suppressHistory=true; try{ doGenerate(true); } finally { suppressHistory=false; } }
 ['hotel','guest','phone','internal'].forEach(id=>$(id).addEventListener('input',()=>{ if(currentReply) softRefresh(); }));
 $('review').addEventListener('input',()=>{ if(currentReply) softRefresh(); });
-$('gen').addEventListener('click',()=>doGenerate());
+$('gen').addEventListener('click',()=>{
+  if(!$('hotel').value.trim()) toast('提示：酒店名称未填写，落款处会用【请填写酒店名称】占位');
+  doGenerate();
+});
 $('reroll').addEventListener('click',()=>doGenerate());
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
