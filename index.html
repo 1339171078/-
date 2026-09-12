@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>酒店点评回复智能体 · 四维度分析 / 批量处理 / 可共享</title>
+<meta name="description" content="酒店点评回复智能体：好评/中评/差评 × 服务/位置/设施/卫生四维度自动诊断，一键生成可发布回复，支持批量处理、门店配置共享、导出 CSV。纯前端运行，不上传数据。">
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --ink:#1c2333; --sub:#5b6579; --line:#e4e8f0;
+    --brand:#2563eb; --brand-dark:#1d4ed8; --brand-soft:#eaf0ff;
+    --good:#0f9d58; --good-soft:#e7f7ee; --mid:#d98b0b; --mid-soft:#fdf3e0;
+    --bad:#e0353b; --bad-soft:#fdecec; --none:#8b93a5; --none-soft:#f0f1f5;
+    --radius:14px; --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;line-height:1.6}
+  header{background:linear-gradient(120deg,#1e3a8a,#2563eb 55%,#3b82f6);color:#fff;padding:24px 24px 30px}
+  .wrap{max-width:1280px;margin:0 auto}
+  .head{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  header h1{margin:0 0 6px;font-size:22px;letter-spacing:.5px;display:flex;align-items:center;gap:9px}
+  .ver{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.35);border-radius:999px;
+    font-size:11px;padding:2px 9px;font-weight:600;letter-spacing:.5px}
+  header p{margin:0;opacity:.88;font-size:13px;max-width:760px}
+  .badges{margin-top:11px;display:flex;gap:7px;flex-wrap:wrap}
+  .badges span{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;padding:3px 11px;font-size:12px}
+  .head-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn-line-white{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);color:#fff}
+  .btn-line-white:hover{background:rgba(255,255,255,.24)}
+  nav.modes{display:flex;gap:8px;margin:-16px auto 16px;padding:0 24px;max-width:1280px}
+  .mode{cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--sub);font-weight:700;
+    font-size:14px;padding:10px 20px;border-radius:12px;font-family:inherit;box-shadow:var(--shadow)}
+  .mode.active{background:var(--brand);border-color:var(--brand);color:#fff}
+  main{max-width:1280px;margin:0 auto 60px;padding:0 24px;display:grid;
+    grid-template-columns:400px 1fr;gap:18px;align-items:start}
+  @media(max-width:980px){main{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px}
+  .card h2{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:0 0 auto}
+  label{display:block;font-size:12.5px;color:var(--sub);margin:12px 0 5px;font-weight:600}
+  input[type=text],select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    font-size:13.5px;font-family:inherit;color:var(--ink);background:#fcfdff}
+  textarea{resize:vertical;min-height:120px;line-height:1.65}
+  textarea.small{min-height:70px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);background:#fff;
+    box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .btn{cursor:pointer;border:none;border-radius:10px;padding:11px 14px;font-size:14px;font-family:inherit;
+    font-weight:600;transition:.15s;white-space:nowrap}
+  .btn-primary{background:var(--brand);color:#fff}
+  .btn-primary:hover{background:var(--brand-dark)}
+  .btn-block{width:100%;margin-top:16px}
+  .btn-ghost{background:var(--brand-soft);color:var(--brand);font-size:12.5px;padding:7px 12px}
+  .btn-ghost:hover{background:#dbe6ff}
+  .btn-line{background:#fff;border:1px solid var(--line);color:var(--ink);font-size:12.5px;padding:8px 13px}
+  .btn-line:hover{border-color:var(--brand);color:var(--brand)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .hint{font-size:12px;color:var(--sub);margin-top:8px}
+  .hint b{color:var(--ink)}
+  .dims{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:560px){.dims{grid-template-columns:1fr}.row2,.row3{grid-template-columns:1fr}}
+  .dim{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fcfdff}
+  .dim .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .dim .name{font-size:13.5px;font-weight:700}
+  .dim .desc{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .dim select{width:auto;padding:3px 6px;font-size:12px;border-radius:7px;background:#fff;margin-top:5px}
+  .chips{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px}
+  .chip{font-size:11.5px;padding:2px 8px;border-radius:999px;background:#eef1f7;color:#48526b}
+  .chip.hit-pos{background:var(--good-soft);color:#0b7a45}
+  .chip.hit-neg{background:var(--bad-soft);color:#b3232a}
+  .pill{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:700;display:inline-block}
+  .p-good{background:var(--good-soft);color:var(--good)}
+  .p-mid{background:var(--mid-soft);color:var(--mid)}
+  .p-bad{background:var(--bad-soft);color:var(--bad)}
+  .p-none{background:var(--none-soft);color:var(--none)}
+  .tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+  .tab{padding:7px 14px;border-radius:9px;font-size:13px;cursor:pointer;background:#f1f3f9;color:var(--sub);
+    font-weight:600;border:1px solid transparent}
+  .tab.active{background:var(--brand-soft);color:var(--brand);border-color:#c7d7ff}
+  .reply{white-space:pre-wrap;font-size:14.5px;line-height:1.85;background:#fbfcff;border:1px solid var(--line);
+    border-left:3px solid var(--brand);border-radius:10px;padding:16px 18px;min-height:150px}
+  .meta-line{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px;
+    color:var(--sub);gap:10px;flex-wrap:wrap}
+  .checks{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  .checks h3{margin:0 0 8px;font-size:13px}
+  .chk{font-size:12.5px;padding:5px 0;display:flex;gap:8px;align-items:flex-start}
+  .ok{color:var(--good)} .warn{color:var(--bad)} .tip{color:var(--mid)}
+  .empty{color:var(--none);font-size:13px;text-align:center;padding:38px 10px}
+  .tier-flag{margin-top:10px;display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--sub)}
+  .tier-flag input{width:auto}
+  .tier-flag label{margin:0;font-weight:500;font-size:12.5px}
+  /* 批量 */
+  .stat-bar{display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);margin:14px 0}
+  .stat-bar b{color:var(--ink)}
+  .brow{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:#fcfdff}
+  .brow .bhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .brow .idx{width:24px;height:24px;border-radius:50%;background:var(--brand-soft);color:var(--brand);
+    font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .brow select{width:auto;padding:4px 8px;font-size:12px;border-radius:8px}
+  .brow .bmeta{font-size:11.5px;color:var(--sub);margin:7px 0 0}
+  .brow textarea{min-height:96px;font-size:13.5px;margin-top:9px}
+  .brow details{margin-top:8px;font-size:12.5px;color:var(--sub)}
+  .brow details summary{cursor:pointer;color:var(--brand)}
+  .badge-warn{background:var(--bad-soft);color:var(--bad);border-radius:999px;font-size:11px;padding:2px 8px;font-weight:700}
+  .badge-ok{background:var(--good-soft);color:var(--good);border-radius:999px;font-size:11px;padding:2px 8px;font-weight:700}
+  /* 弹窗 */
+  .overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;
+    padding:20px;z-index:50}
+  .overlay.show{display:flex}
+  .modal{background:#fff;border-radius:16px;max-width:720px;width:100%;max-height:86vh;overflow:auto;padding:22px}
+  .modal h3{margin:0 0 16px;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .modal .muted{font-size:12px;color:var(--sub);font-weight:400}
+  .modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+  .hitem{border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:9px;background:#fcfdff}
+  .hitem .htop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--sub)}
+  .hitem .hrev{font-size:12.5px;margin:7px 0 0;color:var(--ink)}
+  .hitem .hrep{font-size:12.5px;margin:6px 0 0;color:var(--sub);max-height:66px;overflow:hidden}
+  #toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%) translateY(20px);background:#1c2333;color:#fff;
+    padding:11px 20px;border-radius:11px;font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:86vw;
+    text-align:center}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  footer{max-width:1280px;margin:0 auto;padding:0 24px 40px;font-size:12px;color:var(--none);line-height:1.9}
+  .kbd{background:#eef1f7;border-radius:5px;padding:1px 6px;font-size:11.5px}
+  @media print{header,nav.modes,.head-actions,.toolbar,footer{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap head">
+    <div>
+      <h1>🏨 酒店点评回复智能体 <span class="ver">v2</span></h1>
+      <p>好评 / 中评 / 差评 × 服务 / 位置 / 设施 / 卫生 —— 自动诊断四维度，一键生成可直接发布的回复；支持批量处理、门店配置导入导出、导出 CSV/TXT，可部署给全店共享使用。</p>
+      <div class="badges">
+        <span>四维度自动识别</span><span>三级点评分级</span><span>三种语气</span>
+        <span>批量处理</span><span>合规自查</span><span>配置可共享</span><span>纯本地·不上传</span>
+      </div>
+    </div>
+    <div class="head-actions">
+      <button class="btn btn-line-white" id="btnConfig">⚙️ 门店配置</button>
+      <button class="btn btn-line-white" id="btnHistory">🕘 历史记录</button>
+      <button class="btn btn-line-white" id="btnShare">🔗 分享链接</button>
+    </div>
+  </div>
+</header>
+
+<nav class="modes">
+  <button class="mode active" data-mode="single">单条诊断</button>
+  <button class="mode" data-mode="batch">批量处理</button>
+  <span class="hint" id="modeHint" style="margin:8px 0 0 6px"></span>
+</nav>
+
+<main>
+  <!-- ====================== 单条模式 ====================== -->
+  <section class="card" id="singleInput">
+    <h2><span class="dot"></span>① 输入点评信息</h2>
+    <div class="row2">
+      <div><label>酒店名称</label><input type="text" id="hotel" placeholder="如 云栖精品酒店"></div>
+      <div><label>客人称呼</label><input type="text" id="guest" placeholder="如 王女士"></div>
+    </div>
+    <div class="row2">
+      <div>
+        <label>评分</label>
+        <select id="rating">
+          <option value="5">★★★★★ 5 分</option>
+          <option value="4">★★★★ 4 分</option>
+          <option value="3" selected>★★★ 3 分</option>
+          <option value="2">★★ 2 分</option>
+          <option value="1">★ 1 分</option>
+        </select>
+      </div>
+      <div>
+        <label>点评等级</label>
+        <select id="tier">
+          <option value="good">好评</option>
+          <option value="neutral" selected>中评</option>
+          <option value="bad">差评</option>
+        </select>
+      </div>
+    </div>
+    <label>客服联系电话（差评邀约用）</label>
+    <input type="text" id="phone" placeholder="如 400-000-0000">
+
+    <label>点评原文</label>
+    <textarea id="review" placeholder="把顾客的原话粘贴到这里，系统会自动识别服务/位置/设施/卫生四个维度…"></textarea>
+    <div class="hint">💡 可载入示例点评试效果；按 <span class="kbd">⌘/Ctrl + Enter</span> 快速生成</div>
+    <div class="toolbar" style="margin-top:8px">
+      <button class="btn btn-ghost" data-demo="good">好评示例</button>
+      <button class="btn btn-ghost" data-demo="neutral">中评示例</button>
+      <button class="btn btn-ghost" data-demo="bad">差评示例</button>
+      <button class="btn btn-ghost" data-demo="combo">混合维度示例</button>
+    </div>
+
+    <label>内部已处理措施（选填，会写进回复，避免承诺落空）</label>
+    <textarea id="internal" class="small" placeholder="如：当天已为该客人换房，并赠送双人早餐；工程部已更换空调压缩机"></textarea>
+
+    <div class="tier-flag">
+      <input type="checkbox" id="severe">
+      <label for="severe">涉及严重问题（食品/虫害/安全/财物/隐私）→ 强制走升级流程</label>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="gen">⚡ 生成回复</button>
+  </section>
+
+  <section id="singleOutput">
+    <div class="card" style="margin-bottom:18px">
+      <h2><span class="dot"></span>② 四维度诊断结果
+        <span id="autoTag" class="hint" style="margin-left:auto;font-weight:400"></span>
+      </h2>
+      <div class="dims" id="dims"></div>
+      <div class="hint">识别不准？直接在每个维度右上角手动切换情绪，回复会实时重算。</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="dot"></span>③ 生成回复</h2>
+      <div class="tabs">
+        <div class="tab active" data-tone="warm">温暖亲切</div>
+        <div class="tab" data-tone="formal">专业正式</div>
+        <div class="tab" data-tone="concise">简洁高效</div>
+        <button class="btn btn-ghost" id="reroll" style="margin-left:auto">🔄 换一版</button>
+        <button class="btn btn-ghost" id="copy">📋 复制</button>
+        <button class="btn btn-ghost" id="exportTxt">⬇️ 导出 TXT</button>
+      </div>
+      <div class="reply" id="reply"><div class="empty">在左侧填写点评后，点击「⚡ 生成回复」</div></div>
+      <div class="meta-line">
+        <span id="count">字数：—</span>
+        <span id="tierTag"></span>
+      </div>
+      <div class="checks" id="checks" style="display:none"></div>
+    </div>
+  </section>
+
+  <!-- ====================== 批量模式 ====================== -->
+  <section class="card" id="batchInput" style="display:none">
+    <h2><span class="dot"></span>批量粘贴点评</h2>
+    <div class="hint" style="margin:0 0 10px">
+      支持三种格式：<br>
+      · <b>每行一条</b>：<span class="kbd">5|点评内容</span>（竖线前是评分，也可用逗号/冒号）<br>
+      · <b>空行分隔</b>：一条点评占一段，评分用下面的「默认评分」<br>
+      · <b>每行一条纯文本</b>：全部使用默认评分
+    </div>
+    <textarea id="batchText" style="min-height:230px" placeholder="5|前台热情，房间干净，位置方便，下次还来
+3|空调不太制冷，隔音一般，毛巾有点旧
+1|卫生间有蟑螂，床单有污渍，前台没人接电话"></textarea>
+    <div class="row3" style="margin-top:12px">
+      <div>
+        <label>默认评分（未标注时）</label>
+        <select id="batchRating">
+          <option value="5">5 分</option><option value="4">4 分</option>
+          <option value="3" selected>3 分</option><option value="2">2 分</option><option value="1">1 分</option>
+        </select>
+      </div>
+      <div>
+        <label>等级判定</label>
+        <select id="batchTierMode">
+          <option value="auto" selected>按文本自动判定（更严格）</option>
+          <option value="rating">按评分判定</option>
+        </select>
+      </div>
+      <div>
+        <label>语气</label>
+        <select id="batchTone">
+          <option value="warm" selected>温暖亲切</option>
+          <option value="formal">专业正式</option>
+          <option value="concise">简洁高效</option>
+        </select>
+      </div>
+    </div>
+    <div class="toolbar" style="margin-top:14px">
+      <button class="btn btn-primary" id="batchRun">⚡ 批量生成</button>
+      <button class="btn btn-line" id="batchDemo">载入示例</button>
+      <button class="btn btn-line" id="batchClear">清空</button>
+    </div>
+  </section>
+
+  <section id="batchOutput" style="display:none">
+    <div class="card">
+      <h2><span class="dot"></span>批量结果
+        <span class="hint" style="margin-left:auto;font-weight:400">可直接编辑每条回复，编辑后导出以编辑结果为准</span>
+      </h2>
+      <div class="stat-bar" id="batchStat"></div>
+      <div class="toolbar" style="margin-bottom:14px">
+        <button class="btn btn-ghost" id="batchCopyAll">📋 复制全部</button>
+        <button class="btn btn-ghost" id="batchExportCsv">⬇️ 导出 CSV</button>
+        <button class="btn btn-ghost" id="batchExportTxt">⬇️ 导出 TXT</button>
+        <button class="btn btn-ghost" id="batchReroll">🔄 换一版</button>
+      </div>
+      <div id="batchList"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  变量：<span class="kbd">{酒店名}</span> <span class="kbd">{客人称呼}</span> <span class="kbd">{问题}</span>
+  <span class="kbd">{整改动作}</span> <span class="kbd">{补偿项}</span> ·
+  生成结果请人工复核后发布，差评与严重问题必须经店长确认 ·
+  全部数据在本机浏览器内处理，不联网、不上传；门店配置与历史记录保存在本机浏览器，可通过「门店配置 → 导出 JSON」分享给同事。
+</footer>
+
+<!-- 门店配置 -->
+<div class="overlay" id="ovConfig">
+  <div class="modal">
+    <h3>⚙️ 门店配置 <span class="muted">保存在本机浏览器；导出 JSON 给同事导入，即可全店话术统一</span></h3>
+    <div class="row2">
+      <div><label>酒店名称</label><input type="text" id="cfgHotel"></div>
+      <div><label>默认客人称呼</label><input type="text" id="cfgGuest"></div>
+    </div>
+    <div class="row2">
+      <div><label>客服电话（差评邀约用）</label><input type="text" id="cfgPhone"></div>
+      <div>
+        <label>默认语气</label>
+        <select id="cfgTone">
+          <option value="warm">温暖亲切</option>
+          <option value="formal">专业正式</option>
+          <option value="concise">简洁高效</option>
+        </select>
+      </div>
+    </div>
+    <label>落款（可用 {酒店名} 变量）</label>
+    <input type="text" id="cfgSign" placeholder="——{酒店名} 管理团队 敬上">
+    <label>自定义禁用词（每行一个，发布前自查会检查这些词）</label>
+    <textarea id="cfgBanned" class="small" placeholder="例如：&#10;免费升级&#10;绝对&#10;我们也没办法"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="cfgSave">保存配置</button>
+      <button class="btn btn-line" id="cfgExport">导出 JSON</button>
+      <button class="btn btn-line" id="cfgImport">导入 JSON</button>
+      <input type="file" id="cfgFile" accept=".json,application/json" hidden>
+      <button class="btn btn-line" id="cfgReset">恢复默认</button>
+      <button class="btn btn-line" id="cfgClose" style="margin-left:auto">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="overlay" id="ovHistory">
+  <div class="modal">
+    <h3>🕘 历史记录 <span class="muted">最近 50 条，保存在本机浏览器</span></h3>
+    <div id="historyList"></div>
+    <div class="modal-actions">
+      <button class="btn btn-line" id="hisExport">导出 CSV</button>
+      <button class="btn btn-line" id="hisClear">清空记录</button>
+      <button class="btn btn-line" id="hisClose" style="margin-left:auto">关闭</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================================================
+   1. 四维度词库 + 话术库
+   ========================================================= */
+const DIMS = {
+  service:{
+    label:'服务', icon:'🛎️', desc:'前台 / 接待 / 态度 / 响应速度',
+    pos:['前台','服务态度','态度好','热情','微笑','耐心','贴心','周到','细致','管家','礼宾','行李','叫醒','送餐','响应快','主动','礼貌','专业','接待','帮忙','升级房','延迟退房','寄存','有求必应','服务好','服务很棒','服务到位','亲切','早餐','押金','发票','退房','外卖'],
+    neg:['冷漠','爱答不理','敷衍','态度差','不耐烦','甩脸','催','没人理','找不到人','服务差','不专业','推诿','踢皮球','不响应','没人接','凶','生硬','怠慢','不热情','服务不行','态度恶劣'],
+    praise:[
+      '看到您提到「{kw}」，整个服务团队都很受鼓舞——把客人当自家人，是我们一直想守住的底色。',
+      '很高兴我们的服务能让您感到「{kw}」，从入住到退房，让您省心是我们的本分。',
+      '谢谢您对「{kw}」的肯定，您这句夸奖，我已经转达给当班的伙伴们了。'
+    ],
+    claim:[
+      '服务上让您感到「{kw}」，确实是我们的疏漏，真诚向您说声抱歉',
+      '关于「{kw}」让您不够满意，我们完全认领，不找任何借口',
+      '您反馈的「{kw}」，说明我们在岗衔接和员工培训上还有明显短板'
+    ],
+    fix:[
+      '已重新梳理前厅服务流程，明确「首问负责、3 分钟响应」标准，由前厅主管每日检查落实',
+      '已安排全员服务复训并纳入考核，交接班记录留痕，方便逐单追溯',
+      '已优化高峰时段排班并增开机动办理通道，减少客人的等待时间'
+    ],
+    badClaim:[
+      '「{kw}」这样的服务，完全不符合我们的标准，也让您的旅途添了堵，我们非常自责',
+      '让您在前台受到「{kw}」的对待，是我们管理上的失职，在此郑重道歉',
+      '服务上出现「{kw}」的问题，我们没有任何理由可讲'
+    ],
+    badFix:[
+      '已调取当班记录复盘，对相关同事进行一对一培训与考核，并由前厅经理每日核查',
+      '已启动服务专项整改，指定值班经理为第一责任人，逐项验收销号',
+      '已重新明确服务红线与响应时限，全员签署确认后上岗'
+    ]
+  },
+  location:{
+    label:'位置', icon:'📍', desc:'交通 / 周边 / 导航 / 停车',
+    pos:['位置好','位置方便','交通便利','地铁','公交','商圈','景区','步行','方便','很近','好找','停车方便','机场','火车站','市中心','地段','出行方便','楼下就是'],
+    neg:['太远','偏远','不好找','难找','偏僻','交通不便','停车难','没车位','堵车','导航','绕路','荒','离得远','位置差','打车难'],
+    praise:[
+      '很高兴我们的位置能为您的行程省心——您提到「{kw}」，出行方便是我们最想给到客人的确定性。',
+      '谢谢您认可我们的位置，「{kw}」确实是我们最希望带给客人的便利。',
+      '位置便利能被您感受到，我们很安心，您提到的「{kw}」正是我们最想给到的方便。'
+    ],
+    claim:[
+      '位置是既定条件我们无法改变，但「{kw}」带来的不便，我们可以用服务替您补上',
+      '「{kw}」确实让您多花了时间，这一点我们很抱歉',
+      '关于出行不便，我们搬不动酒店，但可以把路线和时间替您安排妥当'
+    ],
+    fix:[
+      '已提供到店前图文导航指引、24 小时代叫车协助、免费行李寄存与周边出行地图',
+      '前台可协助预约车辆并推荐错峰路线，尽量压缩您花在路上的时间',
+      '已整理周边餐饮与便利店地图，并提供代买代办协助，出行问题随时找前台'
+    ],
+    badClaim:[
+      '因为「{kw}」让您一路折腾，我们心里很过意不去',
+      '「{kw}」带来的不便，我们没能提前帮您规避，是服务没做到位',
+      '让您为「{kw}」费心，我们确实有责任'
+    ],
+    badFix:[
+      '已补充 24 小时代叫车、到店前交通指引短信、免费行李寄存与延时寄存，前台也可帮您规划全程路线',
+      '已增加停车引导人员并开放周边合作车位，可提前致电预留',
+      '已整理周边出行方案与打车时段建议，尽量减少您在路上消耗的时间'
+    ]
+  },
+  facilities:{
+    label:'设施', icon:'🛏️', desc:'隔音 / 空调热水 / 网络 / 装修',
+    pos:['房间大','宽敞','床舒服','床垫','隔音好','安静','空调好','热水','水压','WiFi 快','网络快','电梯','健身房','泳池','停车场','设施齐全','装修','很新','智能','电视','设备好','干净整洁'],
+    neg:['隔音差','太吵','噪音','空调坏','不制冷','不制热','热水不热','没热水','水压小','WiFi 慢','网络差','电梯坏','老旧','太破','坏了','漏水','跳闸','电视坏','房间小','太挤','床硬','设施旧','设备差','灯坏','门锁'],
+    praise:[
+      '看到您对「{kw}」满意，我们很安心——客房设备的舒适度，一直是我们巡检维护的重点。',
+      '谢谢您肯定「{kw}」，让客人住得舒服，是我们做硬件维护的全部意义。',
+      '「{kw}」能得到您的认可，说明我们的坚持是值得的。'
+    ],
+    claim:[
+      '「{kw}」影响了您的居住体验，我们感到很抱歉',
+      '设备上出现「{kw}」，是我们在维护巡检上的失职',
+      '「{kw}」确实与您的期待有差距，我们虚心接受'
+    ],
+    fix:[
+      '已记录并列入设备维护计划，安排工程部逐间排查测试，杜绝设备带病出租',
+      '已联系工程与供应商处理，建立设备台账并提高巡检频次',
+      '已纳入分批翻新计划，优先更换影响睡眠与使用的关键部件'
+    ],
+    badClaim:[
+      '「{kw}」严重影响了您的休息，这是我们在设备维护上的失职',
+      '让您在这样的房间里休息，我们非常惭愧，「{kw}」不该出现',
+      '「{kw}」的问题我们完全认领，没有任何借口'
+    ],
+    badFix:[
+      '已连夜安排工程部检修，并由工程主管在 24 小时内完成全面排查，逐间测试、登记台账',
+      '已停售问题房间，更换故障部件并连续复查，确认正常后再开放预订',
+      '已启动设备专项整改，建立每日巡检与故障房停售机制'
+    ]
+  },
+  hygiene:{
+    label:'卫生', icon:'🧼', desc:'布草 / 卫生间 / 灰尘毛发 / 异味',
+    pos:['干净','卫生','整洁','清洁','无异味','床单','毛巾','一尘不染','清爽','布草','消毒','放心','打扫得','很干净'],
+    neg:['头发','灰尘','太脏','污渍','水渍','霉斑','发霉','异味','臭味','烟味','虫子','蟑螂','蚂蚁','苍蝇','马桶','卫生间脏','毛巾脏','床单脏','杯具','不干净','没打扫','不卫生','油污','有痰','脏'],
+    praise:[
+      '非常感谢您对客房卫生的认可，「{kw}」正是我们「一客一换、逐项验收」的坚持所在。',
+      '「{kw}」能被您感受到，说明我们的标准落到了实处，我们会继续保持。',
+      '谢谢您对卫生的肯定——干净是住得安心的前提，我们会把这份标准坚持到每一间房。'
+    ],
+    claim:[
+      '客房卫生出现「{kw}」这样的疏漏，实在不该，我们诚恳道歉',
+      '「{kw}」没有达到您的期待，是我们查房环节没守住',
+      '卫生上的「{kw}」让您住得不放心，我们很惭愧'
+    ],
+    fix:[
+      '已立即安排返工清洁，并对客房部专项复训、加大查房抽检频次，不合格房间一律返工',
+      '已恢复「清洁—自查—主管复核」三级验收流程，清洁记录可追溯',
+      '已提高布草更换与验收标准，由主管逐间复核后才放房'
+    ],
+    badClaim:[
+      '看到您反馈「{kw}」，我们感到非常羞愧，这严重违背了我们的卫生标准',
+      '「{kw}」这样的房间状态，绝不该交到客人手上，我们郑重道歉',
+      '卫生是我们最基本的底线，「{kw}」说明我们的管理出了严重问题'
+    ],
+    badFix:[
+      '已立即对该房间停售返工，安排深度清洁与全面消杀，调取清洁与查房记录追究环节责任，并对客房部全员重新培训',
+      '已请专业机构消杀并封堵源头，连续三周复查留档，同时提高抽检比例',
+      '已启动卫生专项整改：三级验收、记录可追溯、主管签字放房，责任到人'
+    ]
+  }
+};
+const DIM_KEYS = ['service','location','facilities','hygiene'];
+
+/* 强评价词：决定「好评」，只出现名词（前台/空调/地铁）时只算「中性提及」 */
+const STRONG = {
+  service:['热情','耐心','贴心','周到','细致','亲切','主动','礼貌','专业','有求必应','服务好','服务很棒','服务到位','态度好','态度很好','态度不错','态度热情','帮忙','很到位','服务贴心'],
+  location:['位置好','位置方便','位置不错','位置很棒','交通便利','方便','很方便','超方便','很近','好找','停车方便','出行方便','楼下就是','地段好','优越','便利'],
+  facilities:['宽敞','舒服','舒适','隔音好','安静','热水充足','水压大','WiFi 快','wifi快','网络快','设施齐全','很新','智能','设备好','干净整洁','给力','好用'],
+  hygiene:['干净','卫生','整洁','清洁','无异味','没有异味','一尘不染','清爽','消毒','很干净','打扫得','放心','洁白']
+};
+/* 正则补充：覆盖「不太制冷」「隔音一般」「毛巾有点旧」这类口语表达 */
+const RE = {
+  service:{
+    neg:[/态度.{0,4}(差|不好|恶劣|冷淡|生硬|敷衍)/,/(态度|服务).{0,4}(一般|还行|凑合|将就)/,/(爱答不理|没人理|没人接|无人应答|找不到人)/,/(不|没)(耐烦|热情)/,/(催|赶).{0,4}(退房|走|人)/,/服务.{0,4}(差|不行|不好)/,/办事.{0,3}(慢|拖拉)/,/(办理|入住|退房|手续|排队).{0,4}(慢|久|长|拖)/,/等了.{0,4}(分钟|小时|半天)/,/(早餐|餐饮).{0,4}(差|难吃|少|凉|不好)/,/(押金|发票).{0,4}(不退|开不了|没开|麻烦|问题)/],
+    pos:[/态度.{0,4}(好|不错|很好|棒|到位|热情|客气)/,/(响应|办理|入住|退房).{0,4}(快|迅速|及时|麻利)/]
+  },
+  location:{
+    neg:[/(位置|地段).{0,5}(偏|差|不好|不行|远)/,/(太远|很远|偏远|偏僻|荒)/,/(不好找|难找|找不到|导航.{0,3}(混乱|不准))/,/交通.{0,3}(不便|不方便)/,/出行.{0,3}不方便/,/不方便/,/(打车|叫车|停车).{0,4}(难|不方便|紧张|没车位)/],
+    pos:[/(位置|地段).{0,5}(好|不错|方便|优越|佳|棒|便利)/,/交通.{0,3}(便利|方便)/,/(出门|楼下|步行|走).{0,5}(就是|即到|可达)/]
+  },
+  facilities:{
+    neg:[/隔音.{0,4}(差|不好|不行|一般|糟|烂)/,/(空调|冷气).{0,5}(不|没).{0,3}(制冷|制热|凉|暖|冷|热)/,/(空调|冷气).{0,4}(坏|故障|没用|不给力)/,/(热水|水温|水压).{0,6}(不热|忽冷忽热|凉|小|不足|不稳|没有)/,/(wi-?fi|无线|网络|网速|信号).{0,6}(慢|差|连不上|断|卡|不行|没有)/i,/电梯.{0,4}(坏|停|旧|慢|挤|故障)/,/(老旧|太旧|很旧|陈旧|破旧|老式|设备旧|设施旧)/,/(房间|卫生间|空间).{0,4}(不大|小|挤|窄)/,/床.{0,2}(硬|塌|响)/,/(漏水|渗水|跳闸|灯坏|门锁|电视坏|插头)/,/(价格|价钱|房价).{0,4}(偏?高|贵|不便宜)/,/性价比.{0,3}(一般|不高|差|低)/],
+    pos:[/隔音.{0,4}(好|不错|很好|棒|佳)/,/(床|床垫|床品).{0,4}(舒服|舒适|软|好|棒)/,/(房间|空间).{0,4}(大|宽敞)/,/(空调|热水|水压).{0,4}(好|给力|足|稳定|大)/,/设施.{0,3}(齐全|新|好|完善)/,/(网络|网速|信号|wi-?fi).{0,4}(快|好|流畅|强)/i]
+  },
+  hygiene:{
+    neg:[/(头发|毛发|灰尘|污渍|水渍|霉斑|发霉|异味|臭味|烟味)/,/(虫子|蟑螂|蚂蚁|苍蝇|蚊虫)/,/(毛巾|床单|布草|浴巾|枕套|被套).{0,6}(旧|破|黄|脏|黑|起球|没换)/,/(马桶|卫生间|浴室|地漏).{0,5}(脏|臭|恶心|黄|异味)/,/(不|没)(干净|打扫|消毒|卫生|换)/,/(杯具|水杯|漱口杯).{0,4}(脏|没洗|灰|油腻)/,/(味道|气味).{0,3}(大|重|难闻)/],
+    pos:[/(干净|整洁|清洁|卫生|一尘不染|清爽|无异味|没有异味)/,/(床单|毛巾|布草|被套).{0,5}(干净|洁白|新|清爽)/]
+  }
+};
+
+const GENERIC = {
+  praise:['感谢您的肯定与鼓励，这份认可对我们很重要，我们会继续保持。',
+          '谢谢您的好评，能为您带来舒适的入住体验，我们很欣慰。'],
+  claim:['您提到的这些细节，我们确实做得不够好，在此向您致歉',
+         '这次入住没能达到您的期待，责任在我们'],
+  fix:['已把这些意见列入整改清单，安排专人跟进落实',
+       '已组织相关部门复盘，明确改进动作与完成时限'],
+  badFix:['已由店长牵头启动专项整改，逐项跟进到底',
+          '已开展全面自查，避免同类问题再次发生']
+};
+
+/* ---------- 语气句库 ---------- */
+const TONE = {
+  warm:{
+    greeting:'尊敬的{guest}，',
+    open:{
+      good:'非常感谢您选择{hotel}，也谢谢您这么用心地写下这段分享！',
+      neutral:'感谢您选择{hotel}，也谢谢您把真实感受写下来——这些具体的意见对我们非常宝贵。',
+      bad:'非常抱歉这次入住没能让您满意，看到您的点评，我们心里很不好受，在此向您郑重道歉。'
+    },
+    empathy:{
+      good:'您的满意，是我们每天认真做事的最大回报。',
+      neutral:'我们深知，客人愿意花时间提意见，是还对我们抱有期待。',
+      bad:'让客人带着情绪离开，是服务行业最不该发生的事，这次我们确实没做好。'
+    },
+    action:{
+      good:'我们会把这份肯定继续保持下去，期待在您下次到访时，能再为您多做一些、做得更好。',
+      neutral:'您提到的部分我们已列入本周整改清单，也希望能有机会再为您服务一次，让您看到改变。',
+      bad:'恳请您通过 {phone} 或私信留下联系方式与入住信息，我们想当面向您致歉，并为您妥善安排后续补救。'
+    },
+    actionSevere:'我们会在今天内主动与您取得联系，把该做的补救做到位，也感谢您愿意把问题告诉我们。',
+    closing:{
+      good:'祝您一切顺意，期待与您再见！',
+      neutral:'感谢您的包容，我们会努力做得更细致。',
+      bad:'再次向您致歉，也谢谢您让我们发现问题，我们会用行动改正。'
+    }
+  },
+  formal:{
+    greeting:'尊敬的{guest}：',
+    open:{
+      good:'感谢您选择入住{hotel}并给予评价，您的认可是我们持续提升服务品质的动力。',
+      neutral:'感谢您选择入住{hotel}并提出宝贵意见，您反馈的问题我们已认真记录。',
+      bad:'首先向您郑重致歉，本次入住体验未能达到您的预期，我们深感愧疚。'
+    },
+    empathy:{
+      good:'为您提供舒适、省心的住宿体验，是我们应尽的职责。',
+      neutral:'您所反映的情况，反映出我们在管理细节上仍有不足。',
+      bad:'我们深知，一句道歉不足以弥补给您带来的不便。'
+    },
+    action:{
+      good:'我们将继续保持现有服务标准，并期待在您下次入住时提供更优质的服务。',
+      neutral:'上述问题已列入整改计划，我们将持续跟进落实，期待有机会为您提供更好的体验。',
+      bad:'恳请您通过官方渠道（{phone}）与我们联系，我们将安排专人对接，妥善处理您的诉求。'
+    },
+    actionSevere:'我们将由管理团队专人跟进处理，并在 24 小时内主动与您联系，全力配合您的合理诉求。',
+    closing:{
+      good:'顺祝商祺，期待您的再次光临。',
+      neutral:'感谢您的理解与包容，我们会持续改进。',
+      bad:'再次向您致以诚挚歉意，感谢您的监督与指正。'
+    }
+  },
+  concise:{
+    greeting:'{guest}您好，',
+    open:{
+      good:'感谢您入住{hotel}并留下好评！',
+      neutral:'感谢您的评价与建议，我们已认真记录。',
+      bad:'非常抱歉这次入住没能让您满意，我们向您郑重道歉。'
+    },
+    empathy:{
+      good:'', neutral:'', bad:'这次确实是我们没做好。'
+    },
+    action:{
+      good:'期待您下次入住，我们会继续保持！',
+      neutral:'我们会尽快改进，期待您的再次检验。',
+      bad:'请通过 {phone} 联系我们，我们一定妥善处理。'
+    },
+    actionSevere:'我们会尽快主动与您联系，妥善处理您的诉求。',
+    closing:{
+      good:'祝您旅途愉快！',
+      neutral:'感谢包容，我们会做得更好。',
+      bad:'再次致歉，感谢您的批评。'
+    }
+  }
+};
+const SIGN = '——{hotel} 管理团队 敬上';
+
+/* =========================================================
+   2. 分析引擎
+   ========================================================= */
+function uniqPush(arr, v){ if(v && arr.indexOf(v) < 0) arr.push(v); }
+
+/* 否定语境守卫：把「房间不大」「床不舒服」这类被否定的好评词剔除（"不错" 除外） */
+const NEG_GUARD = /(不|没|无)(?!错).{0,2}(制冷|制热|大|宽敞|好|舒服|舒适|软|快|强|给力|方便|干净|整洁|齐全|好用|安静|新)/;
+
+function analyzeDim(text, dimKey){
+  const d = DIMS[dimKey], re = RE[dimKey] || {};
+  const posW = [], negW = [], posR = [], negR = [], strongW = [];
+  d.pos.forEach(w=>{ if(text.includes(w)) uniqPush(posW, w); });
+  d.neg.forEach(w=>{ if(text.includes(w)) uniqPush(negW, w); });
+  (re.neg||[]).forEach(rx=>{ const m = text.match(rx); if(m) uniqPush(negR, m[0]); });
+  (re.pos||[]).forEach(rx=>{ const m = text.match(rx); if(m) uniqPush(posR, m[0]); });
+  STRONG[dimKey].forEach(w=>{ if(text.includes(w)) uniqPush(strongW, w); });
+
+  const negHits = negW.concat(negR);
+  // 负向优先：出现在负向片段中的正向词是误命中（如 "不方便" 命中 "方便"）
+  const notInNeg = w => !negHits.some(n => n.indexOf(w) >= 0);
+  const negated = w => {
+    const i = text.indexOf(w);
+    if(i < 0) return false;
+    return NEG_GUARD.test(text.slice(Math.max(0, i - 4), i + w.length + 4));
+  };
+  const okPos = w => notInNeg(w) && !negated(w);
+
+  const strongHits = strongW.filter(okPos).concat(posR.filter(okPos));
+  const mentionHits = posW.filter(okPos);
+
+  let mood = 'none';
+  if(negHits.length) mood = 'neg';
+  else if(strongHits.length) mood = 'pos';
+  else if(mentionHits.length) mood = 'neutral';
+
+  return {dimKey, mood, hitsPos:dedupe(mentionHits.concat(strongHits)), hitsNeg:dedupe(negHits),
+          strong:strongHits, strongWord:strongW.filter(okPos), wordPos:mentionHits, wordNeg:negW, manual:false};
+}
+function dedupe(a){ return a.filter((v,i)=>a.indexOf(v)===i); }
+
+/* 取最能代表顾客原话的关键词：优先词库中的短名词/强评价词，避免整句入模板 */
+function topKw(res){
+  const pickFrom = list => {
+    if(!list || !list.length) return '';
+    const short = list.filter(w => w.length <= 5);
+    const pool = short.length ? short : list;
+    return pool.slice().sort((a,b)=>b.length-a.length)[0];
+  };
+  if(res.mood === 'neg'){
+    return pickFrom(res.wordNeg) || pickFrom(res.hitsNeg) || '这次体验';
+  }
+  return pickFrom((res.strongWord||[]).filter(w=>w.length<=5)) || pickFrom(res.strong) ||
+         pickFrom(res.wordPos) || pickFrom(res.hitsPos) || '这次体验';
+}
+
+/* =========================================================
+   3. 回复生成
+   ========================================================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function pick(arr,rnd){return arr[Math.floor(rnd()*arr.length)%arr.length]}
+
+function buildReply(state, toneKey, seed){
+  const rnd = mulberry32(seed);
+  const T = TONE[toneKey];
+  const tier = state.tier;
+  const vars = {hotel:state.hotel, guest:state.guest, phone:state.phone};
+  const fill = s => s.replace(/\{hotel\}/g,vars.hotel).replace(/\{guest\}/g,vars.guest).replace(/\{phone\}/g,vars.phone)
+    .replace(/\{酒店名\}/g,vars.hotel).replace(/\{客人称呼\}/g,vars.guest).replace(/\{电话\}/g,vars.phone);
+
+  const negs = state.dims.filter(d=>d.mood==='neg');
+  const byStrength = (a,b)=>(((b.strong&&b.strong.length)||0) - ((a.strong&&a.strong.length)||0));
+  const poss = state.dims.filter(d=>d.mood==='pos').sort(byStrength);
+  const soft = state.dims.filter(d=>d.mood==='neutral').sort(byStrength);
+  const FIX_CONN = ['目前已采取措施：','我们已第一时间处理：','当前已落实的整改：'];
+  let blocks = [];
+
+  const softLine = (d,i) => {
+    const d0 = DIMS[d.dimKey];
+    return '您提到的「' + topKw(d) + '」，我们也希望做得更到位——' +
+      (i===0 ? pick(d0.fix,rnd) : pick(GENERIC.fix,rnd)) + '。';
+  };
+
+  // 维度句
+  if(tier === 'good'){
+    const use = poss.concat(soft).slice(0,2);
+    use.forEach(d=>{
+      const d0 = DIMS[d.dimKey];
+      blocks.push(fill(pick(d0.praise,rnd).replace('{kw}', topKw(d))));
+    });
+    if(!use.length) blocks.push(pick(GENERIC.praise,rnd));
+    if(negs.length && toneKey !== 'concise'){
+      const n = negs[0], d0 = DIMS[n.dimKey];
+      blocks.push('另外，您坦诚提到的「' + topKw(n) + '」我们也记下了，' + pick(d0.fix,rnd) +
+        '，很抱歉给您带来小小的不便。');
+    }
+  } else if(tier === 'neutral'){
+    poss.slice(0, toneKey==='concise' ? 1 : 2).forEach(d=>{
+      blocks.push('也谢谢您肯定我们的' + DIMS[d.dimKey].label + '——您提到的「' + topKw(d) + '」，我们会继续保持。');
+    });
+    const use = negs.length ? negs : soft;
+    if(!use.length && !poss.length){
+      blocks.push(pick(GENERIC.claim,rnd) + '。' + pick(GENERIC.fix,rnd) + '。');
+    } else if(!negs.length){
+      use.slice(0, toneKey==='concise' ? 1 : 2).forEach((d,i)=>blocks.push(softLine(d,i)));
+    } else {
+      use.slice(0, toneKey==='concise' ? 2 : 3).forEach((d,i)=>{
+        const d0 = DIMS[d.dimKey];
+        blocks.push(pick(d0.claim,rnd).replace('{kw}', topKw(d)) + '。' +
+          (i===0 ? pick(d0.fix,rnd) + '。' : ''));
+      });
+    }
+  } else { // bad
+    // 严重问题：不逐条展开，统一走升级话术
+    if(state.severe){
+      blocks.push('您反馈的情况我们已启动专项核查，由店长牵头跟进到底，绝不推诿。');
+      blocks.push('为更好了解细节并妥善解决，恳请您通过 ' + vars.phone + ' 直接与店长联系，我们将安排专人一对一对接，全力配合您的合理诉求。');
+    } else {
+      poss.slice(0,1).forEach(d=>{
+        blocks.push('也谢谢您在不满之余仍肯定我们的' + DIMS[d.dimKey].label + '，这让我们更愧疚。');
+      });
+      const use = negs.length ? negs : (soft.length ? soft : [null]);
+      use.slice(0, toneKey==='concise' ? 2 : 3).forEach((d,i)=>{
+        if(!d){ blocks.push(pick(GENERIC.claim,rnd) + '。' + pick(GENERIC.badFix,rnd) + '。'); return; }
+        const d0 = DIMS[d.dimKey], label = d0.label;
+        const claim = pick(d0.badClaim,rnd).replace('{kw}', topKw(d));
+        const pre = claim.indexOf(label) >= 0 ? '' : label + '方面：';
+        const fix = negs.length ? pick(d0.badFix,rnd) : pick(GENERIC.badFix,rnd);
+        blocks.push(pre + claim + '。' + FIX_CONN[i % FIX_CONN.length] + fix + '。');
+      });
+    }
+  }
+
+  // 门店内部已完成的处理动作（选填），直接写进回复，避免承诺落空
+  const internal=(state.internal||'').trim().replace(/[。；;，,]$/,'');
+  if(internal && tier!=='good' && !state.severe) blocks.push('针对您反馈的问题，我们已第一时间处理：'+internal.replace(/^我们/,'')+'。');
+
+  // 组装
+  const parts = [];
+  parts.push(fill(T.greeting) + fill(T.open[tier]));
+  const emp = T.empathy[tier];
+  if(emp && !(tier==='bad' && state.severe && toneKey==='concise')) parts.push(emp);
+  parts.push(blocks.join(toneKey==='concise' ? '' : ''));
+  const actionText = (tier==='bad' && state.severe && T.actionSevere) ? T.actionSevere : T.action[tier];
+  parts.push(fill(actionText));
+  parts.push(fill(T.closing[tier]) + fill((state.sign&&state.sign.trim())?state.sign.trim():SIGN));
+
+  let text = parts.filter(Boolean).join('\n\n');
+  // 中评/好评：若字数过短且未精简，追加一句过渡
+  return text;
+}
+
+/* =========================================================
+   4. 合规自查
+   ========================================================= */
+function complianceCheck(text, tier, extraBanned){
+  const out = [];
+  const add=(ok,msg)=>out.push({ok,msg});
+  const severe = /\d{3,4}\s*(房|室)/.test(text);
+  add(!severe, severe ? '疑似泄露客人房号，公开回复不得出现具体房间号' : '未发现客人隐私（房号/姓名/电话）泄露');
+  const induce = /(五星好评|好评返现|返现|加微信|发红包|给个好评|刷好评)/.test(text);
+  add(!induce, induce ? '出现「诱导好评/返现」表述，属平台违规，必须删除' : '未出现诱导好评或返现表述');
+  const weaken = /(但是|不过)\s*[，,]/.test(text);
+  add(!weaken, weaken ? '出现「但是/不过」转折，会削弱前面的认可，建议改为并列句式' : '未使用削弱认可感的转折词');
+  const abs = /(绝对不会|永远不会|100%|百分百|保证不再|绝不出现)/.test(text);
+  add(!abs, abs ? '出现绝对化承诺，无法兑现易引发二次投诉，建议改为「持续跟进/建立机制」' : '未出现绝对化承诺');
+  const argue = /(其他客人都|是您使用|您误会|我们也没办法|跟我们没关系|不是我们的责任)/.test(text);
+  add(!argue, argue ? '出现争辩或甩锅倾向，公开回复中必须避免' : '未出现争辩或推卸责任表述');
+  const phoneLeak = /1[3-9]\d{9}/.test(text);
+  add(!phoneLeak, phoneLeak ? '出现完整手机号，建议改为官方客服电话或引导私信' : '未出现个人手机号');
+
+  const custom=(extraBanned||[]).filter(w=>w && text.includes(w));
+  if((extraBanned||[]).length) add(!custom.length, custom.length ? '触犯门店自定义禁用词：'+custom.join('、') : '未出现门店自定义禁用词');
+
+  // 字数
+  const n = text.replace(/\s/g,'').length;
+  const range = tier==='good' ? [80,200] : tier==='neutral' ? [120,300] : [200,420];
+  const lenOk = n >= range[0]*0.8 && n <= range[1]*1.4;
+  add(lenOk, '正文字数 ' + n + ' 字（' + (tier==='good'?'好评':tier==='neutral'?'中评':'差评') +
+    '建议 ' + range[0] + '~' + range[1] + ' 字）' + (lenOk?'':'，建议调整'));
+
+  // 是否复述了具体内容
+  const quote = /「[^」]{2,}」/.test(text);
+  add(quote, quote ? '已复述顾客原话关键词，不是群发模板 ✓' : '未复述顾客提到的具体内容，建议加入一处原话关键词以体现诚意');
+  return out;
+}
+
+/* =========================================================
+   5. 配置 / 存储 / 工具
+   ========================================================= */
+const LS_CONFIG='hra_config_v1', LS_HISTORY='hra_history_v1';
+const DEFAULT_CONFIG={hotel:'云栖精品酒店',guest:'亲爱的客人',phone:'400-000-0000',
+  sign:'——{hotel} 管理团队 敬上', tone:'warm', banned:''};
+
+const memStore={};
+const store=(()=>{ try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
+  catch(e){ return {getItem:k=>(k in memStore?memStore[k]:null), setItem:(k,v)=>{memStore[k]=String(v)}, removeItem:k=>{delete memStore[k]}}; } })();
+
+function loadConfig(){
+  try{ return Object.assign({},DEFAULT_CONFIG,JSON.parse(store.getItem(LS_CONFIG)||'{}')); }
+  catch(e){ return Object.assign({},DEFAULT_CONFIG); }
+}
+let CONFIG=loadConfig();
+function saveConfig(){ try{ store.setItem(LS_CONFIG,JSON.stringify(CONFIG)); }catch(e){} }
+
+function loadHistory(){ try{ return JSON.parse(store.getItem(LS_HISTORY)||'[]'); }catch(e){ return []; } }
+function saveHistory(list){ try{ store.setItem(LS_HISTORY,JSON.stringify(list.slice(0,50))); }catch(e){} }
+
+const $=id=>document.getElementById(id);
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+let toastTimer=null;
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function copyText(text,label){
+  const done=()=>toast((label||'已复制')+' ✓');
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallback());
+  } else fallback();
+  function fallback(){
+    const ta=document.createElement('textarea'); ta.value=text;
+    ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand('copy'); done(); }catch(e){ toast('复制失败，请手动选择文本'); }
+    ta.remove();
+  }
+}
+function download(name,content,mime){
+  const blob=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },100);
+}
+function csvCell(v){ const s=String(v==null?'':v); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function toCsv(rows){ return '\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'); }
+function stamp(){
+  const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes());
+}
+const TIER_NAME={good:'好评',neutral:'中评',bad:'差评'};
+const SEVERE_WORDS=['蟑螂','老鼠','虫','苍蝇','蚂蚁','食物中毒','拉肚子','腹泻','变质','异物','头发丝在菜','丢失','被盗','被偷','火灾','触电','受伤','辱骂','殴打','隐私','泄露','摄像头','报警','投诉到','曝光'];
+
+/* =========================================================
+   6. 单条模式
+   ========================================================= */
+const state={hotel:'',guest:'',phone:'',sign:'',internal:'',tier:'neutral',severe:false,dims:[]};
+let tone=CONFIG.tone||'warm', seed=Date.now()%100000, currentReply='', lastChecklist=[], suppressHistory=false;
+
+const DEMOS={
+  good:{r:5,t:'good',text:'这次入住体验很好，前台小姐姐特别热情，办理入住很快，还帮我们升级了房间。酒店位置也很棒，出门就是地铁口，走两步就是商圈，吃饭购物都方便。房间干净整洁，床品很舒服，隔音也不错，一觉睡到天亮。早餐品种也挺多。下次来这个城市还住这里！'},
+  neutral:{r:3,t:'neutral',text:'位置还行，离地铁站大概走十分钟。前台态度还可以，但是入住的时候等了快二十分钟才办好。房间空调不太制冷，晚上有点闷，隔音也一般，能听到走廊的声音。卫生间毛巾有点旧了，希望改进一下吧。'},
+  bad:{r:1,t:'bad',text:'非常失望！房间隔音极差，整晚都被隔壁吵得睡不着，空调还不制冷，热得一身汗。卫生间地漏有异味，毛巾上还有头发，太恶心了。前台态度也差，反映问题爱答不理，说没办法解决。花这个价钱住这种房间，完全不值，不会再来第二次。'},
+  combo:{r:2,t:'bad',text:'酒店位置是不错，出门就有公交和商场，这点要肯定。但设施太老旧了，热水忽冷忽热，WiFi 基本连不上，电梯还坏了一部。最不能接受的是卫生，床单上有污渍，房间一股霉味。另外打电话给前台一直没人接，服务响应太慢了。'}
+};
+
+function applyConfigToForm(){
+  $('hotel').value=CONFIG.hotel; $('guest').value=CONFIG.guest; $('phone').value=CONFIG.phone;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tone===(CONFIG.tone||'warm')));
+  tone=CONFIG.tone||'warm';
+}
+
+function renderDims(){
+  const box=$('dims');
+  box.innerHTML=state.dims.map((d,i)=>{
+    const info=DIMS[d.dimKey];
+    const moodLabel={pos:'好评',neg:'差评',none:'未提及',neutral:'中性'}[d.mood];
+    const moodCls={pos:'p-good',neg:'p-bad',none:'p-none',neutral:'p-mid'}[d.mood];
+    const chips=[].concat(d.hitsPos.map(w=>({w,cls:'hit-pos'})),d.hitsNeg.map(w=>({w,cls:'hit-neg'})));
+    const chipHtml=chips.length?chips.map(c=>'<span class="chip '+c.cls+'">'+esc(c.w)+'</span>').join('')
+      :'<span class="chip">未命中关键词</span>';
+    return '<div class="dim"><div class="top"><div><div class="name">'+info.icon+' '+info.label+
+      '</div><div class="desc">'+info.desc+'</div></div><div style="text-align:right"><span class="pill '+moodCls+'">'+moodLabel+
+      '</span><div><select data-dim="'+i+'">'+
+      ['none','pos','neutral','neg'].map(m=>'<option value="'+m+'"'+(m===d.mood?' selected':'')+'>'+
+        ({none:'未提及',pos:'好评',neutral:'中性',neg:'差评'}[m])+'</option>').join('')+
+      '</select></div></div></div><div class="chips">'+chipHtml+'</div></div>';
+  }).join('');
+  box.querySelectorAll('select[data-dim]').forEach(sel=>{
+    sel.addEventListener('change',e=>{
+      const i=+e.target.dataset.dim;
+      state.dims[i].mood=e.target.value;
+      renderDims(); doGenerate(true);
+    });
+  });
+}
+
+function gatherState(){
+  state.hotel=$('hotel').value.trim()||'本酒店';
+  state.guest=$('guest').value.trim()||'亲爱的客人';
+  state.phone=$('phone').value.trim()||'酒店官方客服电话';
+  state.sign=CONFIG.sign||SIGN;
+  state.internal=$('internal').value.trim();
+  state.tier=$('tier').value;
+  state.severe=$('severe').checked;
+}
+
+function doGenerate(keepSeed){
+  gatherState();
+  const text=$('review').value.trim();
+  if(text) state.dims=DIM_KEYS.map(k=>analyzeDim(text,k));
+  const hit=state.dims.filter(d=>d.mood!=='none').length;
+  $('autoTag').textContent=text?('已识别 '+hit+' / 4 个维度'):'尚未输入点评原文';
+  renderDims();
+
+  $('tierTag').innerHTML='当前等级：<b>'+TIER_NAME[state.tier]+'</b>'+(state.severe?'（严重问题·升级流程）':'');
+  if(!text){ $('reply').innerHTML='<div class="empty">请先粘贴点评原文</div>'; currentReply=''; $('checks').style.display='none'; return; }
+
+  if(!keepSeed) seed=Math.floor(Math.random()*100000);
+  currentReply=buildReply(state,tone,seed);
+  $('reply').textContent=currentReply;
+  $('count').textContent='字数：'+currentReply.replace(/\s/g,'').length+' 字';
+  renderChecks(currentReply,state.tier);
+  if(!suppressHistory) pushHistory(text);
+}
+
+function renderChecks(text,tier){
+  lastChecklist=complianceCheck(text,tier,CONFIG.banned.split(/\r?\n/).map(s=>s.trim()).filter(Boolean));
+  $('checks').style.display='block';
+  $('checks').innerHTML='<h3>✅ 发布前合规自查</h3>'+lastChecklist.map(c=>
+    '<div class="chk"><span class="ic '+(c.ok?'ok':'warn')+'">'+(c.ok?'✓':'⚠')+'</span><span>'+esc(c.msg)+'</span></div>').join('');
+}
+
+function pushHistory(review){
+  const list=loadHistory();
+  const entry={t:Date.now(),hotel:state.hotel,guest:state.guest,tier:state.tier,rating:+$('rating').value,tone,review,reply:currentReply};
+  const i=list.findIndex(x=>x.review===review&&x.tier===state.tier);
+  if(i>=0) list.splice(i,1);
+  list.unshift(entry);
+  saveHistory(list);
+}
+function refreshHistory(){
+  const list=loadHistory();
+  if(!list.length){ $('historyList').innerHTML='<div class="empty">暂无记录</div>'; return; }
+  $('historyList').innerHTML=list.map((h,i)=>{
+    const d=new Date(h.t), p=n=>String(n).padStart(2,'0');
+    const cls={good:'p-good',neutral:'p-mid',bad:'p-bad'}[h.tier]||'p-none';
+    return '<div class="hitem"><div class="htop"><span class="pill '+cls+'">'+(TIER_NAME[h.tier]||'')+
+      '</span><span>'+p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+
+      '</span><span>'+esc(h.hotel||'')+'</span><span style="margin-left:auto"></span>'+
+      '<button class="btn btn-ghost" data-hload="'+i+'">载入</button>'+
+      '<button class="btn btn-ghost" data-hcopy="'+i+'">复制回复</button>'+
+      '<button class="btn btn-ghost" data-hdel="'+i+'">删除</button></div>'+
+      '<div class="hrev">'+esc((h.review||'').slice(0,90))+'</div>'+
+      '<div class="hrep">'+esc((h.reply||'').slice(0,80))+'…</div></div>';
+  }).join('');
+  $('historyList').querySelectorAll('[data-hload]').forEach(b=>b.addEventListener('click',()=>{
+    const h=loadHistory()[+b.dataset.hload]; if(!h) return;
+    $('review').value=h.review||''; $('tier').value=h.tier||'neutral'; $('rating').value=h.rating||3;
+    tone=h.tone||tone; document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tone===tone));
+    closeOverlay('ovHistory'); doGenerate(true); toast('已载入历史记录');
+  }));
+  $('historyList').querySelectorAll('[data-hcopy]').forEach(b=>b.addEventListener('click',()=>{
+    const h=loadHistory()[+b.dataset.hcopy]; if(h) copyText(h.reply||'','回复已复制');
+  }));
+  $('historyList').querySelectorAll('[data-hdel]').forEach(b=>b.addEventListener('click',()=>{
+    const list=loadHistory(); list.splice(+b.dataset.hdel,1); saveHistory(list); refreshHistory();
+  }));
+}
+
+/* =========================================================
+   7. 批量模式
+   ========================================================= */
+let batchRows=[];
+
+function tierOf(r){ return r>=4?'good':(r===3?'neutral':'bad'); }
+
+function inferTier(text){
+  if(SEVERE_WORDS.some(w=>text.includes(w))) return 'bad';
+  let neg=0,pos=0;
+  DIM_KEYS.forEach(k=>{
+    const r=analyzeDim(text,k);
+    if(r.mood==='neg') neg+=Math.max(1,r.hitsNeg.length);
+    else if(r.mood==='pos') pos+=Math.max(1,r.strong.length);
+  });
+  if(neg>=2) return 'bad';
+  if(neg===1) return 'neutral';
+  if(pos>=1) return 'good';
+  return 'neutral';
+}
+
+function parseBatch(text,defRating,tierMode){
+  const lines=text.split(/\r?\n/);
+  const nonEmpty=lines.filter(l=>l.trim());
+  const ratedCount=nonEmpty.filter(l=>/^\s*[1-5]\s*[|｜,，:：、]/.test(l)).length;
+  let blocks=[];
+  if(nonEmpty.length && ratedCount>=nonEmpty.length*0.6){
+    nonEmpty.forEach(l=>{
+      const m=l.match(/^\s*([1-5])\s*[|｜,，:：、]\s*(.+)$/);
+      if(m) blocks.push({rating:+m[1],review:m[2].trim()});
+      else blocks.push({rating:defRating,review:l.trim()});
+    });
+  } else {
+    const parts=text.split(/\n\s*\n/).map(s=>s.trim()).filter(Boolean);
+    if(parts.length>1) blocks=parts.map(p=>({rating:defRating,review:p.replace(/\s*\n\s*/g,' ')}));
+    else blocks=nonEmpty.map(l=>({rating:defRating,review:l.trim()}));
+  }
+  return blocks.map(b=>({rating:b.rating, review:b.review,
+    tier: tierMode==='auto' ? inferTier(b.review) : tierOf(b.rating), auto: tierMode==='auto'}));
+}
+
+function rowState(row){
+  return {hotel:CONFIG.hotel||'本酒店', guest:CONFIG.guest||'亲爱的客人',
+    phone:CONFIG.phone||'酒店官方客服电话', sign:CONFIG.sign||SIGN, internal:'',
+    tier:row.tier, severe:SEVERE_WORDS.some(w=>row.review.includes(w)),
+    dims:DIM_KEYS.map(k=>analyzeDim(row.review,k))};
+}
+function rowReply(row,i,seedBase){
+  return buildReply(rowState(row), $('batchTone').value, (seedBase+i*977)%100000);
+}
+
+function batchRun(seedBase){
+  const text=$('batchText').value.trim();
+  if(!text){ toast('请先粘贴至少一条点评'); return; }
+  batchRows=parseBatch(text,+$('batchRating').value,$('batchTierMode').value);
+  renderBatch(seedBase);
+}
+
+function renderBatch(seedBase){
+  const base=(seedBase==null)?Math.floor(Math.random()*100000):seedBase;
+  $('batchList').innerHTML=batchRows.map((row,i)=>{
+    const st=rowState(row);
+    const reply=row.reply!=null?row.reply:rowReply(row,i,base);
+    if(row.reply==null) row.reply=reply;
+    const dims=st.dims.filter(d=>d.mood!=='none')
+      .map(d=>{const cls={pos:'p-good',neg:'p-bad',neutral:'p-mid'}[d.mood];
+        return '<span class="pill '+cls+'" style="margin-right:4px">'+DIMS[d.dimKey].label+':'+
+          ({pos:'好评',neg:'差评',neutral:'中性'}[d.mood])+'「'+esc(topKw(d))+'」</span>';}).join('');
+    const warnCount=complianceCheck(reply,row.tier,CONFIG.banned.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)).filter(c=>!c.ok).length;
+    return '<div class="brow" data-row="'+i+'">'+
+      '<div class="bhead"><span class="idx">'+(i+1)+'</span>'+
+      '<select data-br="'+i+'">'+[5,4,3,2,1].map(v=>'<option value="'+v+'"'+(v===row.rating?' selected':'')+'>'+v+' 分</option>').join('')+'</select>'+
+      '<select data-bt="'+i+'">'+['good','neutral','bad'].map(t=>'<option value="'+t+'"'+(t===row.tier?' selected':'')+'>'+TIER_NAME[t]+'</option>').join('')+'</select>'+
+      (row.auto?'<span class="hint" style="margin:0">自动判定</span>':'')+
+      (warnCount?'<span class="badge-warn">⚠ '+warnCount+' 项待确认</span>':'<span class="badge-ok">✓ 自查通过</span>')+
+      '<span style="margin-left:auto"></span>'+
+      '<button class="btn btn-ghost" data-bcopy="'+i+'">复制</button>'+
+      '<button class="btn btn-ghost" data-breroll="'+i+'">换一版</button>'+
+      '</div>'+
+      '<div class="bmeta">'+dims+'</div>'+
+      '<details><summary>查看点评原文</summary><div style="margin-top:6px">'+esc(row.review)+'</div></details>'+
+      '<textarea data-btext="'+i+'" spellcheck="false">'+esc(reply)+'</textarea>'+
+      '</div>';
+  }).join('');
+
+  const stat={good:0,neutral:0,bad:0};
+  batchRows.forEach(r=>stat[r.tier]++);
+  const warnTotal=batchRows.reduce((n,r)=>n+complianceCheck(r.reply||'',r.tier,
+    CONFIG.banned.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)).filter(c=>!c.ok).length,0);
+  $('batchStat').innerHTML='共 <b>'+batchRows.length+'</b> 条 ｜ 好评 <b>'+stat.good+'</b> ｜ 中评 <b>'+stat.neutral+
+    '</b> ｜ 差评 <b>'+stat.bad+'</b> ｜ 需人工确认 <b>'+warnTotal+'</b> 项';
+
+  $('batchList').querySelectorAll('[data-btext]').forEach(ta=>ta.addEventListener('input',()=>{
+    batchRows[+ta.dataset.btext].reply=ta.value;
+  }));
+  $('batchList').querySelectorAll('[data-bcopy]').forEach(b=>b.addEventListener('click',()=>{
+    copyText(batchRows[+b.dataset.bcopy].reply||'','第 '+(+b.dataset.bcopy+1)+' 条回复已复制');
+  }));
+  $('batchList').querySelectorAll('[data-breroll]').forEach(b=>b.addEventListener('click',()=>{
+    const i=+b.dataset.breroll;
+    batchRows[i].reply=rowReply(batchRows[i],i,Math.floor(Math.random()*100000));
+    renderBatch();
+  }));
+  $('batchList').querySelectorAll('[data-br]').forEach(sel=>sel.addEventListener('change',()=>{
+    const i=+sel.dataset.br, row=batchRows[i];
+    row.rating=+sel.value; row.auto=false;
+    if($('batchTierMode').value!=='auto') row.tier=tierOf(row.rating);
+    row.reply=rowReply(row,i,base); renderBatch(base);
+  }));
+  $('batchList').querySelectorAll('[data-bt]').forEach(sel=>sel.addEventListener('change',()=>{
+    const i=+sel.dataset.bt, row=batchRows[i];
+    row.tier=sel.value; row.auto=false; row.reply=rowReply(row,i,base); renderBatch(base);
+  }));
+}
+
+function batchRowsForExport(){
+  return batchRows.map((r,i)=>[i+1, r.rating+'分', TIER_NAME[r.tier], r.review,
+    rowState(r).dims.filter(d=>d.mood!=='none').map(d=>DIMS[d.dimKey].label+'/'+
+      ({pos:'好评',neg:'差评',neutral:'中性'}[d.mood])).join(' '),
+    r.reply||'',
+    complianceCheck(r.reply||'',r.tier,CONFIG.banned.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))
+      .filter(c=>!c.ok).map(c=>c.msg).join('；')]);
+}
+
+/* =========================================================
+   8. 分享链接（配置 + 当前点评，压缩后写入 URL hash）
+   ========================================================= */
+function b64urlEncode(bytes){
+  let bin=''; const CH=0x8000;
+  for(let i=0;i<bytes.length;i+=CH) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function b64urlDecode(str){
+  const s=str.replace(/-/g,'+').replace(/_/g,'/');
+  const bin=atob(s+ '='.repeat((4-s.length%4)%4));
+  const out=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i);
+  return out;
+}
+async function encodeShare(obj){
+  const json=JSON.stringify(obj);
+  if(typeof CompressionStream==='function' && typeof Blob==='function'){
+    try{
+      const cs=new CompressionStream('deflate-raw');
+      const stream=new Blob([new TextEncoder().encode(json)]).stream().pipeThrough(cs);
+      const buf=new Uint8Array(await new Response(stream).arrayBuffer());
+      return 'z'+b64urlEncode(buf);
+    }catch(e){}
+  }
+  return 'u'+b64urlEncode(new TextEncoder().encode(json));
+}
+async function decodeShare(str){
+  if(!str) return null;
+  const tag=str[0], body=str.slice(1);
+  const bytes=b64urlDecode(body);
+  if(tag==='z'){
+    const ds=new DecompressionStream('deflate-raw');
+    const stream=new Blob([bytes]).stream().pipeThrough(ds);
+    const text=await new Response(stream).text();
+    return JSON.parse(text);
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function makeShareLink(){
+  const payload={v:2, cfg:{hotel:CONFIG.hotel,guest:CONFIG.guest,phone:CONFIG.phone,sign:CONFIG.sign,tone:CONFIG.tone},
+    review:$('review').value, rating:+$('rating').value, tier:$('tier').value, mode:currentMode};
+  const code=await encodeShare(payload);
+  const url=location.origin+location.pathname+location.search+'#s='+code;
+  copyText(url,'分享链接已复制');
+  if(location.protocol==='file:') toast('已复制；本地文件链接仅本机有效，部署到内网/云端后即可分享给同事');
+}
+async function applyShareFromHash(){
+  const m=location.hash.match(/[#&]s=([^&]+)/);
+  if(!m) return false;
+  try{
+    const p=await decodeShare(m[1]);
+    if(!p) return false;
+    if(p.cfg){
+      CONFIG=Object.assign({},CONFIG,p.cfg); saveConfig();
+      $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest;
+      $('cfgPhone').value=CONFIG.phone; $('cfgSign').value=CONFIG.sign; $('cfgBanned').value=CONFIG.banned||'';
+    }
+    applyConfigToForm();
+    if(p.review){
+      $('review').value=p.review; $('rating').value=p.rating||3; $('tier').value=p.tier||tierOf(p.rating||3);
+    }
+    switchMode(p.mode==='batch'?'batch':'single');
+    doGenerate(true);
+    toast('已载入分享内容');
+    return true;
+  }catch(e){ toast('分享链接解析失败'); return false; }
+}
+
+/* =========================================================
+   9. 事件绑定与启动
+   ========================================================= */
+let currentMode='single';
+function switchMode(mode){
+  currentMode=mode;
+  document.querySelectorAll('.mode').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  $('singleInput').style.display=mode==='single'?'':'none';
+  $('singleOutput').style.display=mode==='single'?'':'none';
+  $('batchInput').style.display=mode==='batch'?'':'none';
+  $('batchOutput').style.display=(mode==='batch'&&batchRows.length)?'':'none';
+  $('modeHint').textContent=mode==='batch'
+    ? '一行一条，支持「评分|点评」格式；适合把平台后台的点评整段粘进来批量出稿'
+    : '适合单条精修：可切换语气、手动校正维度、逐条合规自查';
+  if(mode==='batch'&&!batchRows.length) $('batchOutput').style.display='none';
+}
+function openOverlay(id){ $(id).classList.add('show'); }
+function closeOverlay(id){ $(id).classList.remove('show'); }
+
+document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click',()=>switchMode(b.dataset.mode)));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') document.querySelectorAll('.overlay.show').forEach(o=>o.classList.remove('show'));
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){ e.preventDefault(); currentMode==='batch'?batchRun():doGenerate(); }
+});
+
+$('rating').addEventListener('change',()=>{ $('tier').value=tierOf(+$('rating').value); doGenerate(); });
+$('tier').addEventListener('change',()=>doGenerate());
+$('severe').addEventListener('change',()=>doGenerate());
+function softRefresh(){ suppressHistory=true; try{ doGenerate(true); } finally { suppressHistory=false; } }
+['hotel','guest','phone','internal'].forEach(id=>$(id).addEventListener('input',()=>{ if(currentReply) softRefresh(); }));
+$('review').addEventListener('input',()=>{ if(currentReply) softRefresh(); });
+$('gen').addEventListener('click',()=>doGenerate());
+$('reroll').addEventListener('click',()=>doGenerate());
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); tone=t.dataset.tone; doGenerate(true);
+}));
+$('copy').addEventListener('click',()=>{ if(currentReply) copyText(currentReply,'回复已复制'); else toast('请先生成回复'); });
+$('exportTxt').addEventListener('click',()=>{
+  if(!currentReply){ toast('请先生成回复'); return; }
+  const txt='【点评等级】'+TIER_NAME[state.tier]+'\n【点评原文】\n'+$('review').value.trim()+
+    '\n\n【建议回复】\n'+currentReply+'\n\n【发布前自查】\n'+
+    lastChecklist.map(c=>(c.ok?'✓ ':'⚠ ')+c.msg).join('\n')+'\n';
+  download('酒店点评回复_'+stamp()+'.txt',txt);
+  toast('已导出 TXT');
+});
+document.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click',()=>{
+  const d=DEMOS[b.dataset.demo];
+  $('review').value=d.text; $('rating').value=d.r; $('tier').value=d.t; $('severe').checked=false;
+  doGenerate();
+}));
+
+/* 门店配置 */
+$('btnConfig').addEventListener('click',()=>{
+  $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
+  $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone||'warm'; $('cfgBanned').value=CONFIG.banned||'';
+  openOverlay('ovConfig');
+});
+$('cfgClose').addEventListener('click',()=>closeOverlay('ovConfig'));
+$('cfgSave').addEventListener('click',()=>{
+  CONFIG={hotel:$('cfgHotel').value.trim()||DEFAULT_CONFIG.hotel,
+    guest:$('cfgGuest').value.trim()||DEFAULT_CONFIG.guest,
+    phone:$('cfgPhone').value.trim()||DEFAULT_CONFIG.phone,
+    sign:$('cfgSign').value.trim()||DEFAULT_CONFIG.sign,
+    tone:$('cfgTone').value, banned:$('cfgBanned').value};
+  saveConfig(); applyConfigToForm(); closeOverlay('ovConfig');
+  if(currentReply) doGenerate(true);
+  toast('门店配置已保存');
+});
+$('cfgReset').addEventListener('click',()=>{
+  CONFIG=Object.assign({},DEFAULT_CONFIG); saveConfig();
+  $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
+  $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone; $('cfgBanned').value='';
+  applyConfigToForm(); if(currentReply) doGenerate(true); toast('已恢复默认配置');
+});
+$('cfgExport').addEventListener('click',()=>{
+  download('酒店点评智能体-门店配置.json',JSON.stringify({_type:'hotel-review-agent-config',_v:2,
+    hotel:$('cfgHotel').value.trim(),guest:$('cfgGuest').value.trim(),phone:$('cfgPhone').value.trim(),
+    sign:$('cfgSign').value.trim(),tone:$('cfgTone').value,banned:$('cfgBanned').value},null,2),'application/json');
+  toast('配置已导出，发给同事导入即可');
+});
+$('cfgImport').addEventListener('click',()=>$('cfgFile').click());
+$('cfgFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const c=JSON.parse(rd.result);
+      CONFIG=Object.assign({},DEFAULT_CONFIG,{hotel:c.hotel,guest:c.guest,phone:c.phone,sign:c.sign,tone:c.tone,banned:c.banned});
+      saveConfig();
+      $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
+      $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone; $('cfgBanned').value=CONFIG.banned||'';
+      applyConfigToForm(); if(currentReply) doGenerate(true); toast('配置导入成功');
+    }catch(err){ toast('配置文件解析失败'); }
+  };
+  rd.readAsText(f,'utf-8'); e.target.value='';
+});
+
+/* 历史记录 */
+$('btnHistory').addEventListener('click',()=>{ refreshHistory(); openOverlay('ovHistory'); });
+$('hisClose').addEventListener('click',()=>closeOverlay('ovHistory'));
+$('hisClear').addEventListener('click',()=>{ saveHistory([]); refreshHistory(); toast('历史记录已清空'); });
+$('hisExport').addEventListener('click',()=>{
+  const list=loadHistory(); if(!list.length){ toast('暂无记录'); return; }
+  download('酒店点评回复历史_'+stamp()+'.csv',toCsv([['时间','酒店','等级','点评原文','回复'],...list.map(h=>
+    [new Date(h.t).toLocaleString('zh-CN'),h.hotel||'',TIER_NAME[h.tier]||'',h.review||'',h.reply||''])]),'text/csv');
+  toast('历史记录已导出');
+});
+
+/* 分享 */
+$('btnShare').addEventListener('click',makeShareLink);
+
+/* 批量事件 */
+$('batchRun').addEventListener('click',()=>{ batchRun(); $('batchOutput').style.display=''; });
+$('batchClear').addEventListener('click',()=>{ $('batchText').value=''; batchRows=[]; $('batchOutput').style.display='none'; });
+$('batchDemo').addEventListener('click',()=>{
+  $('batchText').value=['5|前台小姐姐特别热情，办理入住很快，房间干净整洁，床品舒服，位置也好，出门就是地铁口，下次还来。',
+    '4|整体不错，服务热情，房间也干净，就是停车位有点紧张。',
+    '3|位置还行，离地铁十分钟。前台态度还可以，但办入住等了二十分钟。空调不太制冷，隔音一般，毛巾有点旧了。',
+    '2|设施太老旧了，热水忽冷忽热，WiFi 基本连不上。卫生也一般，床单有污渍。打电话给前台一直没人接。',
+    '1|非常失望！卫生间有蟑螂，床单上有污渍，房间一股霉味，前台态度差，反映问题爱答不理，不会再来。'].join('\n');
+  toast('已载入 5 条示例，点「批量生成」');
+});
+$('batchTone').addEventListener('change',()=>{ if(batchRows.length){ batchRows.forEach(r=>r.reply=null); renderBatch(); } });
+$('batchRating').addEventListener('change',()=>{ if(batchRows.length) toast('默认评分已更改，重新生成后生效'); });
+$('batchTierMode').addEventListener('change',()=>{ if(batchRows.length) batchRun(Math.floor(Math.random()*100000)); });
+$('batchReroll').addEventListener('click',()=>{ if(!batchRows.length){ toast('请先生成'); return; } batchRows.forEach(r=>r.reply=null); renderBatch(); });
+$('batchCopyAll').addEventListener('click',()=>{
+  if(!batchRows.length){ toast('请先生成'); return; }
+  const txt=batchRows.map((r,i)=>'【第 '+(i+1)+' 条 · '+TIER_NAME[r.tier]+'】\n'+r.reply).join('\n\n');
+  copyText(txt,'已复制 '+batchRows.length+' 条回复');
+});
+$('batchExportCsv').addEventListener('click',()=>{
+  if(!batchRows.length){ toast('请先生成'); return; }
+  download('酒店点评批量回复_'+stamp()+'.csv',
+    toCsv([['序号','评分','等级','点评原文','识别维度','建议回复','待确认项'],...batchRowsForExport()]),'text/csv');
+  toast('已导出 CSV（Excel 可直接打开）');
+});
+$('batchExportTxt').addEventListener('click',()=>{
+  if(!batchRows.length){ toast('请先生成'); return; }
+  const txt=batchRows.map((r,i)=>['【第 '+(i+1)+' 条】'+r.rating+'分 · '+TIER_NAME[r.tier],
+    '点评：'+r.review,'','回复：'+(r.reply||''),'----------------------------------------'].join('\n')).join('\n\n');
+  download('酒店点评批量回复_'+stamp()+'.txt',txt);
+  toast('已导出 TXT');
+});
+
+/* 启动 */
+applyConfigToForm();
+$('rating').value=3; $('tier').value='neutral';
+$('review').value=DEMOS.neutral.text;
+switchMode('single');
+doGenerate(true);
+applyShareFromHash();
+</script>
+</body>
+</html>

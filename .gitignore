@@ -1,0 +1,16 @@
+# 系统/编辑器杂项
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# 本机系统配置备份（含个人 LaunchServices 关联设置，不要上传）
+backup-launchservices-*.plist
+launchservices-backup.plist
+
+# 门店真实数据（如果你在本地放了真实配置或导出结果，默认不上传）
+门店配置.json
+酒店点评智能体-门店配置.json
+*批量回复*.csv
+*点评回复历史*.csv
+*.local.json
