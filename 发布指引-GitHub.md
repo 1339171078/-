@@ -61,7 +61,8 @@
 3. 在访达里按 **⌘ + A** 全选，然后把文件**拖进浏览器的虚线框**
    - ⚠️ 不要拖 `.git` 文件夹（访达里默认是隐藏的，看不到就不用管）
    - ⚠️ 不要拖 `backup-launchservices-....plist`（那是你电脑的系统配置备份，与工具无关）
-   - 需要上传的是这些：`index.html`、`README.md`、`sharing.md`、`serve.sh`、`samples.md`、`templates.md`、`system-prompt.md`、`agent-config.json`、`reply-tool.html`、`.gitignore`、`打开工具.command`、`共享给同事.command`
+   - 需要上传的是这些：`index.html`、`README.md`、`sharing.md`、`serve.sh`、`samples.md`、`templates.md`、`system-prompt.md`、`agent-config.json`、`site-config.json`、`reply-tool.html`、`.gitignore`、`打开工具.command`、`共享给同事.command`，以及 `.github/workflows/deploy-pages.yml`（自动部署）
+   - ⚠️ **不要上传** `backup-launchservices-*.plist`（那是本机系统配置备份）
 4. 等文件列表全部出现后，页面底部：
    - Commit message 填：`初始化：酒店点评回复智能体 v2`
    - 点 **Commit changes**
