@@ -140,6 +140,7 @@
       </div>
     </div>
     <div class="head-actions">
+      <span class="btn btn-line-white" id="lockBadge" style="display:none;cursor:default">🔒 公开版 · 门店信息已锁定</span>
       <button class="btn btn-line-white" id="btnConfig">⚙️ 门店配置</button>
       <button class="btn btn-line-white" id="btnHistory">🕘 历史记录</button>
       <button class="btn btn-line-white" id="btnShare">🔗 分享链接</button>
@@ -183,6 +184,9 @@
     </div>
     <label>客服联系电话（选填）</label>
     <input type="text" id="phone" placeholder="选填：填写后差评回复会带上您的电话">
+    <div id="lockNote" class="hint" style="display:none;color:#d98b0b;background:#fdf3e0;border-radius:8px;padding:8px 10px;margin-top:8px">
+      🔒 <b>公开版本</b>：酒店名称与电话由管理员统一设定，此处不可修改（本机的原始文件仍可自由编辑）。
+    </div>
 
     <label>点评原文</label>
     <textarea id="review" placeholder="把顾客的原话粘贴到这里，系统会自动识别服务/位置/设施/卫生四个维度…"></textarea>
@@ -328,6 +332,7 @@
       <button class="btn btn-line" id="cfgExport">导出 JSON</button>
       <button class="btn btn-line" id="cfgImport">导入 JSON</button>
       <input type="file" id="cfgFile" accept=".json,application/json" hidden>
+      <button class="btn btn-line" id="cfgCopyLocked">📋 复制锁定版配置</button>
       <button class="btn btn-line" id="cfgReset">恢复默认</button>
       <button class="btn btn-line" id="cfgClose" style="margin-left:auto">关闭</button>
     </div>
@@ -1134,7 +1139,7 @@ async function applyShareFromHash(){
   try{
     const p=await decodeShare(m[1]);
     if(!p) return false;
-    if(p.cfg){
+    if(p.cfg && !LOCKED){
       CONFIG=Object.assign({},CONFIG,p.cfg); saveConfig();
       $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest;
       $('cfgPhone').value=CONFIG.phone; $('cfgSign').value=CONFIG.sign; $('cfgBanned').value=CONFIG.banned||'';
@@ -1151,7 +1156,47 @@ async function applyShareFromHash(){
 }
 
 /* =========================================================
-   9. 事件绑定与启动
+   9. 公开版锁定：门店信息只能在本机修改
+   ---------------------------------------------------------
+   · file:// 打开、localhost、内网 IP（192.168./10./172.16-31.）→ 可编辑
+   · 部署到公网（如 *.github.io）打开 → 门店信息锁定，只读
+   · 锁定版可通过同目录的 site-config.json 统一设定门店信息
+   ========================================================= */
+function isLocalOrigin(){
+  if(location.protocol==='file:') return true;
+  const h=location.hostname||'';
+  if(!h) return true;
+  if(h==='localhost'||h==='127.0.0.1'||h==='::1') return true;
+  if(/^10\./.test(h)||/^192\.168\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)) return true;
+  if(/\.local$/.test(h)) return true;
+  return false;
+}
+let LOCKED=!isLocalOrigin();
+
+function applyLockMode(){
+  if(!LOCKED) return;
+  $('btnConfig').style.display='none';
+  $('lockBadge').style.display='';
+  $('lockNote').style.display='';
+  ['hotel','guest','phone'].forEach(id=>{
+    const el=$(id); el.readOnly=true; el.style.background='#f4f6fb'; el.style.color='#5b6579';
+  });
+}
+async function loadLockedConfig(){
+  if(!LOCKED) return;
+  try{
+    const r=await fetch('site-config.json',{cache:'no-store'});
+    if(!r.ok) return;
+    const c=await r.json();
+    if(!c||typeof c!=='object') return;
+    CONFIG=Object.assign({},CONFIG,{hotel:c.hotel||'',guest:c.guest||DEFAULT_CONFIG.guest,
+      phone:c.phone||'',sign:c.sign||'',tone:c.tone||'warm'});
+    applyConfigToForm();
+  }catch(e){ /* 没有配置文件就跳过 */ }
+}
+
+/* =========================================================
+   10. 事件绑定与启动
    ========================================================= */
 let currentMode='single';
 function switchMode(mode){
@@ -1212,6 +1257,7 @@ document.querySelectorAll('[data-demo]').forEach(b=>b.addEventListener('click',(
 
 /* 门店配置 */
 $('btnConfig').addEventListener('click',()=>{
+  if(LOCKED){ toast('🔒 公开版本已锁定门店信息，请在本机修改后重新发布'); return; }
   $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
   $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone||'warm'; $('cfgBanned').value=CONFIG.banned||'';
   openOverlay('ovConfig');
@@ -1238,6 +1284,11 @@ $('cfgExport').addEventListener('click',()=>{
     hotel:$('cfgHotel').value.trim(),guest:$('cfgGuest').value.trim(),phone:$('cfgPhone').value.trim(),
     sign:$('cfgSign').value.trim(),tone:$('cfgTone').value,banned:$('cfgBanned').value},null,2),'application/json');
   toast('配置已导出，发给同事导入即可');
+});
+$('cfgCopyLocked').addEventListener('click',()=>{
+  const c={hotel:$('cfgHotel').value.trim(),guest:$('cfgGuest').value.trim(),
+    phone:$('cfgPhone').value.trim(),sign:$('cfgSign').value.trim(),tone:$('cfgTone').value};
+  copyText(JSON.stringify(c,null,2),'锁定版配置已复制，发给部署者提交为 site-config.json 即可');
 });
 $('cfgImport').addEventListener('click',()=>$('cfgFile').click());
 $('cfgFile').addEventListener('change',e=>{
@@ -1310,7 +1361,8 @@ $('rating').value=3; $('tier').value='neutral';
 $('review').value=DEMOS.neutral.text;
 switchMode('single');
 doGenerate(true);
-applyShareFromHash();
+applyLockMode();
+loadLockedConfig().then(applyShareFromHash);
 </script>
 </body>
 </html>
