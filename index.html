@@ -64,6 +64,24 @@
   .head{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:20px;
     flex-wrap:wrap;padding-top:22px;padding-bottom:20px}
   .brand{display:flex;align-items:center;gap:14px;min-width:0}
+  .avatar{position:relative;width:46px;height:46px;flex:0 0 auto;border-radius:13px;display:grid;place-items:center;
+    cursor:pointer;transition:.18s;outline-offset:3px}
+  .avatar:hover{transform:translateY(-1px)}
+  .avatar:focus-visible{outline:3px solid rgba(255,255,255,.7)}
+  .avatar.locked{cursor:not-allowed;transform:none}
+  .avatar img{width:46px;height:46px;border-radius:13px;object-fit:cover;display:block;background:#fff;
+    border:2px solid rgba(255,255,255,.7);box-shadow:0 4px 14px rgba(0,0,0,.22)}
+  .avatar-badge{position:absolute;right:-4px;bottom:-4px;width:20px;height:20px;border-radius:50%;
+    background:#fff;color:var(--brand-2);display:grid;place-items:center;border:1px solid #e2e8f2;
+    box-shadow:0 2px 8px rgba(0,0,0,.22);opacity:0;transition:.18s;pointer-events:none}
+  .avatar-badge svg{width:12px;height:12px}
+  .avatar:hover .avatar-badge,.avatar:focus-visible .avatar-badge{opacity:1}
+  .avatar.locked .avatar-badge{display:none}
+  .avatar-del{position:absolute;right:-6px;top:-6px;width:19px;height:19px;border-radius:50%;border:2px solid #fff;
+    background:var(--bad);color:#fff;font-size:13px;line-height:1;display:none;place-items:center;
+    cursor:pointer;padding:0;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .avatar.has-img:hover .avatar-del{display:grid}
+  .avatar.locked .avatar-del{display:none!important}
   .mark{width:44px;height:44px;flex:0 0 auto;border-radius:13px;display:grid;place-items:center;
     background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 4px 14px rgba(0,0,0,.12);backdrop-filter:blur(4px)}
@@ -308,9 +326,17 @@
 <header class="app-header">
   <div class="wrap head">
     <div class="brand">
-      <span class="mark" aria-hidden="true">
-        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5h5v5"/></svg>
-      </span>
+      <div class="avatar" id="avatarBox" role="button" tabindex="0" aria-label="上传酒店头像" title="点击上传头像（本机保存）">
+        <img id="avatarImg" alt="酒店头像" style="display:none">
+        <span class="mark" id="avatarFallback" aria-hidden="true">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 4l9 6.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5h5v5"/></svg>
+        </span>
+        <span class="avatar-badge" aria-hidden="true">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5h3l1.2-2h7.6L17 8.5h3v10H4z"/><circle cx="12" cy="13" r="3.2"/></svg>
+        </span>
+        <button class="avatar-del" id="avatarDel" type="button" title="移除头像" aria-label="移除头像">×</button>
+      </div>
+      <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
       <div class="brand-text">
         <h1>酒店点评回复智能体 <span class="ver">v2</span></h1>
         <p>五维度诊断 · 批量出稿 · 合规自查 · 可离线部署</p>
@@ -1375,7 +1401,7 @@ function complianceCheck(text, tier, extraBanned){
 const LS_CONFIG='hra_config_v1', LS_HISTORY='hra_history_v1';
 const HOTEL_FALLBACK='本酒店', SIGN_FALLBACK='——酒店管理团队 敬上';
 const DEFAULT_CONFIG={hotel:'',guest:'亲爱的客人',phone:'',
-  sign:'', tone:'warm', banned:''};   // 全部留空：由使用者在界面上自行填写，落款自动生成
+  sign:'', tone:'warm', banned:'', avatar:''};   // 全部留空：由使用者在界面上自行填写，落款自动生成
 
 const memStore={};
 const store=(()=>{ try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); return localStorage; }
@@ -1386,7 +1412,7 @@ function loadConfig(){
   catch(e){ return Object.assign({},DEFAULT_CONFIG); }
 }
 let CONFIG=loadConfig();
-function saveConfig(){ try{ store.setItem(LS_CONFIG,JSON.stringify(CONFIG)); }catch(e){} }
+function saveConfig(){ try{ store.setItem(LS_CONFIG,JSON.stringify(CONFIG)); return true; }catch(e){ return false; } }
 
 function loadHistory(){ try{ return JSON.parse(store.getItem(LS_HISTORY)||'[]'); }catch(e){ return []; } }
 function saveHistory(list){ try{ store.setItem(LS_HISTORY,JSON.stringify(list.slice(0,50))); }catch(e){} }
@@ -1492,13 +1518,15 @@ function doGenerate(keepSeed){
   if(!severeTouched) $('severe').checked = !!rv && isSevere(rv);
   gatherState();
   const text=$('review').value.trim();
-  if(text) state.dims=DIM_KEYS.map(k=>analyzeDim(text,k));
+  state.dims = text ? DIM_KEYS.map(k=>analyzeDim(text,k))
+                    : DIM_KEYS.map(k=>({dimKey:k, mood:'none', hitsPos:[], hitsNeg:[], strong:[], strongWord:[], wordPos:[], wordNeg:[]}));
   const hit=state.dims.filter(d=>d.mood!=='none').length;
   $('autoTag').textContent=text?('已识别 '+hit+' / '+DIM_KEYS.length+' 个维度'):'尚未输入点评原文';
   renderDims();
 
   $('tierTag').innerHTML='当前等级：<b>'+TIER_NAME[state.tier]+'</b>'+(state.severe?'（严重问题·升级流程）':'');
-  if(!text){ $('reply').innerHTML='<div class="empty">请先粘贴点评原文</div>'; currentReply=''; $('checks').style.display='none'; return; }
+  if(!text){ $('reply').innerHTML='<div class="empty">粘贴顾客点评后，这里会生成可直接发布的回复</div>';
+    currentReply=''; $('checks').style.display='none'; $('count').textContent='字数：—'; return; }
 
   if(!keepSeed) seed=Math.floor(Math.random()*100000);
   currentReply=buildReply(state,tone,seed);
@@ -1702,13 +1730,14 @@ function isLocalOrigin(){
 let LOCKED=!isLocalOrigin();
 
 function applyLockMode(){
-  if(!LOCKED) return;
+  if(!LOCKED){ renderAvatar(); return; }
   $('btnConfig').style.display='none';
   $('lockBadge').style.display='';
   $('lockNote').style.display='';
   ['hotel','guest','phone'].forEach(id=>{
     const el=$(id); el.readOnly=true; el.classList.add('is-locked');
   });
+  renderAvatar();
 }
 async function loadLockedConfig(){
   if(!LOCKED) return;
@@ -1718,10 +1747,79 @@ async function loadLockedConfig(){
     const c=await r.json();
     if(!c||typeof c!=='object') return;
     CONFIG=Object.assign({},CONFIG,{hotel:c.hotel||'',guest:c.guest||DEFAULT_CONFIG.guest,
-      phone:c.phone||'',sign:c.sign||'',tone:c.tone||'warm'});
-    applyConfigToForm();
+      phone:c.phone||'',sign:c.sign||'',tone:c.tone||'warm',
+      avatar:c.avatar||CONFIG.avatar||''});
+    applyConfigToForm(); renderAvatar();
   }catch(e){ /* 没有配置文件就跳过 */ }
 }
+
+/* =========================================================
+   8.5 头像模块：左上角上传 / 更换 / 移除（保存在本机）
+   ========================================================= */
+function renderAvatar(){
+  const box=$('avatarBox'); if(!box) return;
+  const a=(CONFIG.avatar||'').trim(), img=$('avatarImg'), fb=$('avatarFallback');
+  if(a){ img.src=a; img.style.display='block'; fb.style.display='none'; }
+  else { img.removeAttribute('src'); img.style.display='none'; fb.style.display='grid'; }
+  box.classList.toggle('has-img',!!a);
+  box.classList.toggle('locked',!!LOCKED);
+  box.title = LOCKED ? '公开版本：头像由管理员统一设定'
+                     : (a ? '点击更换头像' : '点击上传酒店头像（保存在本机）');
+}
+/* 读取图片 → 居中裁切为 200×200 → JPEG，避免占用过大存储 */
+function processAvatar(file,cb){
+  const rd=new FileReader();
+  rd.onload=()=>{
+    const src=rd.result;
+    if(typeof Image!=='function' || !document.createElement){ cb(src); return; }
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const S=200, c=document.createElement('canvas');
+        c.width=S; c.height=S;
+        const ctx=c.getContext&&c.getContext('2d');
+        if(!ctx || !img.width || !img.height){ cb(src); return; }
+        const r=Math.max(S/img.width, S/img.height);
+        const w=Math.round(img.width*r), h=Math.round(img.height*r);
+        ctx.drawImage(img,Math.round((S-w)/2),Math.round((S-h)/2),w,h);
+        cb(c.toDataURL('image/jpeg',0.86));
+      }catch(e){ cb(src); }
+    };
+    img.onerror=()=>cb(src);
+    img.src=src;
+  };
+  rd.onerror=()=>cb(null);
+  rd.readAsDataURL(file);
+}
+function pickAvatar(){
+  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }
+  $('avatarFile').click();
+}
+$('avatarBox').addEventListener('click',e=>{ if(e.target && e.target.id==='avatarDel') return; pickAvatar(); });
+$('avatarBox').addEventListener('keydown',e=>{
+  if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pickAvatar(); }
+  if(e.key==='Delete'||e.key==='Backspace'){ e.preventDefault(); removeAvatar(); }
+});
+$('avatarDel').addEventListener('click',e=>{ e.stopPropagation(); removeAvatar(); });
+function removeAvatar(){
+  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }
+  if(!CONFIG.avatar) return;
+  CONFIG.avatar=''; saveConfig(); renderAvatar(); toast('已移除头像');
+}
+$('avatarFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value='';
+  if(!f) return;
+  if(LOCKED){ toast('🔒 公开版本：头像由管理员统一设定'); return; }   // 锁定版禁止改动头像
+  if(!/^image\//.test(f.type)){ toast('请选择图片文件（JPG / PNG / WebP）'); return; }
+  if(f.size>8*1024*1024){ toast('图片过大，请选择小于 8MB 的图片'); return; }
+  processAvatar(f,url=>{
+    if(!url){ toast('图片读取失败，请换一张'); return; }
+    if(url.length>1200000){ toast('图片过大，请换一张更小的'); return; }
+    const prev=CONFIG.avatar; CONFIG.avatar=url;
+    if(!saveConfig()){ CONFIG.avatar=prev; toast('保存失败：浏览器存储空间不足'); return; }
+    renderAvatar(); toast('头像已更新');
+  });
+});
 
 /* =========================================================
    9. 事件绑定与启动
@@ -1806,7 +1904,7 @@ $('cfgSave').addEventListener('click',()=>{
     guest:$('cfgGuest').value.trim()||DEFAULT_CONFIG.guest,
     phone:$('cfgPhone').value.trim()||DEFAULT_CONFIG.phone,
     sign:$('cfgSign').value.trim()||DEFAULT_CONFIG.sign,
-    tone:$('cfgTone').value, banned:$('cfgBanned').value};
+    tone:$('cfgTone').value, banned:$('cfgBanned').value, avatar:CONFIG.avatar||''};
   saveConfig(); applyConfigToForm(); closeOverlay('ovConfig');
   if(currentReply) doGenerate(true);
   toast('门店配置已保存');
@@ -1815,18 +1913,20 @@ $('cfgReset').addEventListener('click',()=>{
   CONFIG=Object.assign({},DEFAULT_CONFIG); saveConfig();
   $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
   $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone; $('cfgBanned').value='';
-  applyConfigToForm(); if(currentReply) doGenerate(true); toast('已恢复默认配置');
+  applyConfigToForm(); renderAvatar(); if(currentReply) doGenerate(true); toast('已恢复默认配置');
 });
 $('cfgExport').addEventListener('click',()=>{
   download('酒店点评智能体-门店配置.json',JSON.stringify({_type:'hotel-review-agent-config',_v:2,
     hotel:$('cfgHotel').value.trim(),guest:$('cfgGuest').value.trim(),phone:$('cfgPhone').value.trim(),
-    sign:$('cfgSign').value.trim(),tone:$('cfgTone').value,banned:$('cfgBanned').value},null,2),'application/json');
+    sign:$('cfgSign').value.trim(),tone:$('cfgTone').value,banned:$('cfgBanned').value,
+    avatar:CONFIG.avatar||''},null,2),'application/json');
   toast('配置已导出，发给同事导入即可');
 });
 $('cfgCopyLocked').addEventListener('click',()=>{
   const c={hotel:$('cfgHotel').value.trim(),guest:$('cfgGuest').value.trim(),
     phone:$('cfgPhone').value.trim(),sign:$('cfgSign').value.trim(),tone:$('cfgTone').value};
-  copyText(JSON.stringify(c,null,2),'锁定版配置已复制，发给部署者提交为 site-config.json 即可');
+  copyText(JSON.stringify(c,null,2),'已复制（不含头像）· 交给部署者写入 site-config.json');
+  if(CONFIG.avatar) setTimeout(()=>toast('提示：头像未包含在复制的配置里'),1600);
 });
 $('cfgImport').addEventListener('click',()=>$('cfgFile').click());
 $('cfgFile').addEventListener('change',e=>{
@@ -1835,8 +1935,9 @@ $('cfgFile').addEventListener('change',e=>{
   rd.onload=()=>{
     try{
       const c=JSON.parse(rd.result);
-      CONFIG=Object.assign({},DEFAULT_CONFIG,{hotel:c.hotel,guest:c.guest,phone:c.phone,sign:c.sign,tone:c.tone,banned:c.banned});
-      saveConfig();
+      CONFIG=Object.assign({},DEFAULT_CONFIG,{hotel:c.hotel,guest:c.guest,phone:c.phone,sign:c.sign,
+        tone:c.tone,banned:c.banned,avatar:c.avatar||''});
+      saveConfig(); renderAvatar();
       $('cfgHotel').value=CONFIG.hotel; $('cfgGuest').value=CONFIG.guest; $('cfgPhone').value=CONFIG.phone;
       $('cfgSign').value=CONFIG.sign; $('cfgTone').value=CONFIG.tone; $('cfgBanned').value=CONFIG.banned||'';
       applyConfigToForm(); if(currentReply) doGenerate(true); toast('配置导入成功');
@@ -1894,8 +1995,9 @@ $('batchExportTxt').addEventListener('click',()=>{
 
 /* 启动 */
 applyConfigToForm();
+renderAvatar();
 $('rating').value=3; $('tier').value='neutral';
-$('review').value=DEMOS.neutral.text;
+$('review').value='';                      // 默认留空，由使用者自行填写
 switchMode('single');
 doGenerate(true);
 applyLockMode();
